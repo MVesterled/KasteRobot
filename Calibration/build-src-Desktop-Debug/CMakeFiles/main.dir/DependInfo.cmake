@@ -8,6 +8,7 @@ set(CMAKE_DEPENDS_LANGUAGES
 
 # The set of dependency files which are needed:
 set(CMAKE_DEPENDS_DEPENDENCY_FILES
+  "/home/matmat1000/Documents/Calibration_cpp/Calibration_cpp/Calibration/src/Camera.cpp" "CMakeFiles/main.dir/Camera.cpp.o" "gcc" "CMakeFiles/main.dir/Camera.cpp.o.d"
   "/home/matmat1000/Documents/Calibration_cpp/Calibration_cpp/Calibration/src/main.cpp" "CMakeFiles/main.dir/main.cpp.o" "gcc" "CMakeFiles/main.dir/main.cpp.o.d"
   )
 
