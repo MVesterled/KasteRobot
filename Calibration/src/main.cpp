@@ -51,7 +51,7 @@ int main(int argc, char **argv) {
      fields with a size of 70x70mm.
      Note: You can freely choose where to put the coordinate frame. The standard
      is to define the points in the xy-plane and set the z-coordinate to 0 */
-  //Size of board square
+  //Size of board square.
   float squareSize = 70.0f;
 
   // Generate the 3D coordinates for the checkerboard corners (Z = 0)
