@@ -37,6 +37,10 @@ int main(int argc, char **argv) {
     // Display
     //Succes Parameter indicating whether the complete board was found or not
     cv::drawChessboardCorners(img, patternSize, q[i], success);
+
+    //cv::namedWindow("chessboard detection", cv::WINDOW_NORMAL); // Make window resizable
+    //cv::resizeWindow("chessboard detection", 1500, 1000); // Resize window to specific size
+
     //cv::imshow("chessboard detection", img);
     //cv::waitKey(0);
     i++;
@@ -97,9 +101,49 @@ int main(int argc, char **argv) {
 
 
     // Display
-    cv::imshow("Undistorted Image", imgUndistorted);
-    cv::waitKey(0);
+    //cv::namedWindow("Undistorted Image", cv::WINDOW_NORMAL); // Make window resizable
+    //cv::resizeWindow("Undistorted Image", 1500, 1000); // Resize window to specific size
+    //cv::imshow("Undistorted Image", imgUndistorted);
+    //cv::waitKey(0);
   }
+
+  //Real world transformation of coordiantes
+  // Image points (corresponding to real-world points)
+  std::vector<cv::Point2f> imagePoints;
+  imagePoints.push_back(cv::Point2f(416, 384)); // (0, 0)
+  imagePoints.push_back(cv::Point2f(442, 885)); // (2.5, 57.5)
+  imagePoints.push_back(cv::Point2f(1044, 409)); // (80, 0)
+  imagePoints.push_back(cv::Point2f(962, 844)); // (67.5, 57.5)
+
+  // Real world points
+  std::vector<cv::Point2f> realWorldPoints;
+  realWorldPoints.push_back(cv::Point2f(0.0f, 0.0f));     // (0, 0)
+  realWorldPoints.push_back(cv::Point2f(2.5f, 57.5f));    // (2.5, 57.5)
+  realWorldPoints.push_back(cv::Point2f(80.0f, 0.0f));    // (80, 0)
+  realWorldPoints.push_back(cv::Point2f(67.5f, 57.5f));   // (67.5, 57.5)
+
+  // Compute the homography matrix
+  cv::Mat H = cv::getPerspectiveTransform(imagePoints, realWorldPoints);
+
+  std::cout << "Homography matrix H: " << H << std::endl;
+
+  // Now, we can use the homography matrix to transform a point
+  // Let's take the pixel coordinates (537, 487)
+  cv::Point2f pixelPoint(695, 413);
+
+  // Convert the point to homogeneous coordinates (add 1 to the point)
+  std::vector<cv::Point2f> pixelPoints;
+  pixelPoints.push_back(pixelPoint);
+
+  std::vector<cv::Point2f> realWorldTransformedPoints;
+
+  // Apply the homography to the point
+  cv::perspectiveTransform(pixelPoints, realWorldTransformedPoints, H);
+
+  // The resulting real world coordinates
+  std::cout << "The transformed real world coordinates are: ("
+            << realWorldTransformedPoints[0].x << ", "
+            << realWorldTransformedPoints[0].y << ")" << std::endl;
 
   return 0;
 }
