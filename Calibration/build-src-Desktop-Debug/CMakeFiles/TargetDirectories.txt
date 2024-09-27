@@ -1,3 +1,0 @@
-/home/matmat1000/Documents/Calibration_cpp/Calibration_cpp/Calibration/build-src-Desktop-Debug/CMakeFiles/main.dir
-/home/matmat1000/Documents/Calibration_cpp/Calibration_cpp/Calibration/build-src-Desktop-Debug/CMakeFiles/edit_cache.dir
-/home/matmat1000/Documents/Calibration_cpp/Calibration_cpp/Calibration/build-src-Desktop-Debug/CMakeFiles/rebuild_cache.dir
