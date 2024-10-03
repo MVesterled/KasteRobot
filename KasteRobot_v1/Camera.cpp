@@ -8,7 +8,9 @@ void Camera::calibrateCamera(){
     std::vector<cv::String> fileNames;
     //glob gets all files of a folder (false means no sub directories)
     cv::glob("/home/matmat1000/Documents/Calibration_cpp/TestPic2/*.png", fileNames, false);
+    //cv::glob("/home/matmat1000/Documents/calibrationImages/*.png", fileNames, false);
     cv::Size patternSize(9, 6); //internal corners of calibrationplate
+    //cv::Size patternSize(24, 17); //internal corners of calibrationplate
     // Declare a vector of vectors to store 2D points (found corners) for each image
     // The size of 'q' matches the number of files in 'fileNames', so each image will have a corresponding entry
     std::vector<std::vector<cv::Point2f>> q(fileNames.size());
@@ -32,13 +34,13 @@ void Camera::calibrateCamera(){
 
         // Display
         //Succes Parameter indicating whether the complete board was found or not
-        /*
+/*
         cv::drawChessboardCorners(img, patternSize, q[i], success);
         cv::namedWindow("chessboard detection", cv::WINDOW_NORMAL); // Make window resizable
         cv::resizeWindow("chessboard detection", 1500, 1000); // Resize window to specific size
         cv::imshow("chessboard detection", img);
         cv::waitKey(0);
-        */
+*/
         i++;
     }
 
@@ -72,16 +74,15 @@ void Camera::calibrateCamera(){
     std::cout << "Calibrating..." << std::endl;
     // Finds the error in the calibration
     float error = cv::calibrateCamera(Q, q, frameSize, K, k, rvecs, tvecs, stdIntrinsics, stdExtrinsics, perViewErrors);
-    /*
+
     std::cout << "Reprojection error = " << error << "\nK =\n"
               << K << "\nk=\n"
               << k << std::endl;
-*/
+
 
     // Precompute lens correction interpolation
-    cv::Mat mapX, mapY;
     cv::initUndistortRectifyMap(K, k, cv::Matx33f::eye(), K, frameSize, CV_32FC1,
-                                mapX, mapY);
+                                mMapX, mMapY);
 
     // Show lens corrected images
     for (auto const &f : fileNames) {
@@ -91,7 +92,7 @@ void Camera::calibrateCamera(){
 
         cv::Mat imgUndistorted;
         // Remap the image using the precomputed interpolation maps.
-        cv::remap(img, imgUndistorted, mapX, mapY, cv::INTER_LINEAR);
+        cv::remap(img, imgUndistorted, mMapX, mMapY, cv::INTER_LINEAR);
 
 
         // Display
@@ -103,21 +104,19 @@ void Camera::calibrateCamera(){
 
     //Real world transformation of coordiantes
     // Image points (corresponding to real-world points)
-    std::vector<cv::Point2f> imagePoints;
-    imagePoints.push_back(cv::Point2f(416, 384)); // (0, 0) real world
-    imagePoints.push_back(cv::Point2f(442, 885)); // (2.5, 57.5) real world
-    imagePoints.push_back(cv::Point2f(1044, 409)); // (80, 0) real world
-    imagePoints.push_back(cv::Point2f(962, 844)); // (67.5, 57.5) real world
+    mImagePoints.push_back(cv::Point2f(417, 385)); // (0, 0) real world top left
+    mImagePoints.push_back(cv::Point2f(1043, 409)); // (800, 0) real world top right
+    mImagePoints.push_back(cv::Point2f(421, 1041)); // (0, 750) real world bottom left
+    mImagePoints.push_back(cv::Point2f(1047, 972)); // (800, 750) real world bottom right
 
     // Real world points
-    std::vector<cv::Point2f> realWorldPoints;
-    realWorldPoints.push_back(cv::Point2f(0.0f, 0.0f));     // (0, 0)
-    realWorldPoints.push_back(cv::Point2f(2.5f, 57.5f));    // (2.5, 57.5)
-    realWorldPoints.push_back(cv::Point2f(80.0f, 0.0f));    // (80, 0)
-    realWorldPoints.push_back(cv::Point2f(67.5f, 57.5f));   // (67.5, 57.5)
+    mRealWorldPoints.push_back(cv::Point2f(0.0f, 0.0f));     // (0, 0) real world top left
+    mRealWorldPoints.push_back(cv::Point2f(800.0f, 0.0f));    // (800, 0) real world top right
+    mRealWorldPoints.push_back(cv::Point2f(0.0f, 750.0f));    // (0, 750) real world bottom left
+    mRealWorldPoints.push_back(cv::Point2f(800.0f, 750.0f));   // (800, 750) real world bottom right
 
     // Compute the homography matrix
-    mHomoMat = cv::getPerspectiveTransform(imagePoints, realWorldPoints);
+    mHomoMat = cv::getPerspectiveTransform(mImagePoints, mRealWorldPoints);
 
     std::cout << "Calibration done" << std::endl;
 }
@@ -142,4 +141,34 @@ cv::Point2f Camera::TransformPoint(cv::Point2f pixelPoint){
 cv::Mat Camera::getHomoMat() const{
     return mHomoMat;
 }
+
+//returns mMapX
+cv::Mat Camera::getMapX() const{
+    return mMapX;
+}
+
+//returns mMapY
+cv::Mat Camera::getMapY() const{
+    return mMapY;
+}
+
+//Vizulize calibration:
+void Camera::visualizeCalib(){
+    cv::Mat input = cv::imread("/home/matmat1000/Documents/ballTest.jpg");
+    cv::Mat output;
+    cv::warpPerspective(input, output, mHomoMat, cv::Size(800,750)); // Use input size or desired output size
+    //cv::imwrite("/home/matmat1000/Documents/ballTestPerspective.jpg", output);
+    // Display the transformed image
+    cv::namedWindow("Undist before perspectiveTrans", cv::WINDOW_NORMAL); // Make window resizable
+    cv::resizeWindow("Undist before perspectiveTrans", 800, 750);       // Resize window to specific size
+    cv::imshow("Undist before perspectiveTrans", input);
+    cv::waitKey(0); // Wait for a key press
+
+    // Display the transformed image
+    cv::namedWindow("Undist after perspectiveTrans", cv::WINDOW_NORMAL); // Make window resizable
+    cv::resizeWindow("Undist after perspectiveTrans", 800, 750);       // Resize window to specific size
+    cv::imshow("Undist after perspectiveTrans", output);
+    cv::waitKey(0); // Wait for a key press
+}
+
 

@@ -19,23 +19,51 @@
 
 using namespace ur_rtde;
 
+//Function for multiplying matrices - temp location
+void mulMat(double** mat1, double** mat2, double** result, int R1, int C1, int R2, int C2) {
+    // Check if matrix dimensions are compatible for multiplication
+    if (C1 != R2) {
+        std::cout << "Matrix multiplication not possible. Incompatible dimensions." << std::endl;
+        return;
+    }
+
+    // Matrix multiplication
+    for (int i = 0; i < R1; i++) {
+        for (int j = 0; j < C2; j++) {
+            result[i][j] = 0;
+            for (int k = 0; k < C1; k++) {
+                result[i][j] += mat1[i][k] * mat2[k][j];
+            }
+        }
+    }
+}
+
 int main(int argc, char* argv[])
 {
+
     //Calibration of camera test that also prints transformation matrix
     Camera visionCam;
     visionCam.calibrateCamera();
-    cv::Point2f pixelPoint(695, 413); //creates point to convert fra camera to table
+    cv::Point2f pixelPoint(593, 519); //creates point to convert fra camera to table (Red ball)
     cv::Point2f TablePoint(0, 0);     //creates point to store real world coordinate
     TablePoint = visionCam.TransformPoint(pixelPoint);
 
     std::cout << "Homography matrix: " << visionCam.getHomoMat() << std::endl;
 
-    std::cout << "The transformed real world coordinates are: ("
+    std::cout << "The transformed real world coordinates for the red ball are: ("
               << TablePoint.x << ", "
               << TablePoint.y << ")" << std::endl;
 
+    visionCam.visualizeCalib();
     std::cout << "Program started" << std::endl;
 
+    //multiplication test
+    double mat1[2][3] = {{1.2, 2.3, 3.4}, {4.5, 5.6, 6.7}};
+    double mat2[3][2] = {{7.8, 8.9}, {9.1, 10.2}, {11.3, 12.4}};
+    double result [2][2];
+    mulMat((double**)mat1, (double**)mat2, (double**)result, 2, 3, 3, 2);
+
+// ////////////////////////////////////////////////////////////////////////////////////////////////
     /*
      * Robot connection test that prints out live shoulder location
 
@@ -60,8 +88,117 @@ int main(int argc, char* argv[])
 
 */
 
+// ////////////////////////////////////////////////////////////////////////////////////////////////
     /*
-     * Live camera feed test
+    //Camera capure 1 picture, can only be ran with camera connected
+
+    // Initialize Pylon runtime
+    Pylon::PylonAutoInitTerm autoInitTerm;
+
+    try
+    {
+        // Create an instant camera object with the camera device found first.
+        Pylon::CInstantCamera camera(Pylon::CTlFactory::GetInstance().CreateFirstDevice());
+
+        // Get a camera nodemap in order to access camera parameters.
+        GenApi::INodeMap& nodemap = camera.GetNodeMap();
+
+        // Open the camera before accessing any parameters.
+        camera.Open();
+
+        // Create a pylon ImageFormatConverter object.
+        Pylon::CImageFormatConverter formatConverter;
+        formatConverter.OutputPixelFormat = Pylon::PixelType_BGR8packed;
+
+        // Create a PylonImage that will hold the captured image.
+        Pylon::CPylonImage pylonImage;
+
+        // Set custom exposure (optional, you can remove this if not needed)
+        int myExposure = 30000;
+        GenApi::CEnumerationPtr exposureAuto(nodemap.GetNode("ExposureAuto"));
+        if (GenApi::IsWritable(exposureAuto))
+        {
+            exposureAuto->FromString("Off");
+        }
+
+        GenApi::CFloatPtr exposureTime = nodemap.GetNode("ExposureTime");
+        if (exposureTime.IsValid())
+        {
+            if (myExposure >= exposureTime->GetMin() && myExposure <= exposureTime->GetMax())
+            {
+                exposureTime->SetValue(myExposure);
+            }
+            else
+            {
+                exposureTime->SetValue(exposureTime->GetMin());
+            }
+        }
+
+        // Start grabbing a single image.
+        camera.StartGrabbing(1);
+
+        // This smart pointer will receive the grab result data.
+        Pylon::CGrabResultPtr ptrGrabResult;
+
+        // Wait for an image and then retrieve it.
+        camera.RetrieveResult(5000, ptrGrabResult, Pylon::TimeoutHandling_ThrowException);
+
+        // Check if the image was grabbed successfully.
+        if (ptrGrabResult->GrabSucceeded())
+        {
+            // Convert the grabbed buffer to a pylon image.
+            formatConverter.Convert(pylonImage, ptrGrabResult);
+
+            // Create an OpenCV image (cv::Mat) from the pylon image.
+            cv::Mat img = cv::Mat(ptrGrabResult->GetHeight(), ptrGrabResult->GetWidth(), CV_8UC3, (uint8_t*)pylonImage.GetBuffer());
+
+            // At this point, img contains the captured image as a cv::Mat object.
+            // You can now use this cv::Mat object for further processing.
+
+            // Undistort the image using the precomputed maps (optional if needed)
+            cv::Mat undistortedImage;
+            cv::remap(img, undistortedImage, visionCam.getMapX(), visionCam.getMapY(), cv::INTER_LINEAR);
+
+            // Example: Transform a pixel point to real-world coordinates
+            cv::Point2f pixelPointRed(592, 514);  // Red Ball
+            cv::Point2f pixelPointGreen(796, 639);  // Green Ball
+
+            cv::Point2f realWorldPointRed = visionCam.TransformPoint(pixelPointRed);
+            cv::Point2f realWorldPointGreen = visionCam.TransformPoint(pixelPointGreen);
+
+            std::cout << "Real-world coordinates red: (" << realWorldPointRed.x << ", " << realWorldPointRed.y << ")" << std::endl;
+            std::cout << "Real-world coordinates green: (" << realWorldPointGreen.x << ", " << realWorldPointGreen.y << ")" << std::endl;
+
+            std::cout << "Image captured successfully!" << std::endl;
+            // Optional: Save the image to disk for verification
+            cv::imwrite("/home/matmat1000/Documents/ballTest.jpg", undistortedImage);
+            // Create an OpenCV display window
+            cv::namedWindow( "Captured Image unDist", cv::WINDOW_NORMAL); // other options: CV_AUTOSIZE, CV_FREERATIO
+            cv::resizeWindow("Captured Image unDist", 900, 600); // Resize window to specific size
+            cv::imshow("Captured Image unDist", undistortedImage);
+            cv::waitKey(0);  // Wait for a key press
+
+        }
+        else
+        {
+            std::cerr << "Error: " << ptrGrabResult->GetErrorCode() << " " << ptrGrabResult->GetErrorDescription() << std::endl;
+        }
+
+        // Close the camera
+        camera.Close();
+    }
+    catch (GenICam::GenericException &e)
+    {
+        // Error handling
+        std::cerr << "An exception occurred: " << e.GetDescription() << std::endl;
+        return 1;
+    }
+    */
+
+// ////////////////////////////////////////////////////////////////////////////////////////////////
+
+/*
+    //Live camera feed test
     int myExposure = 30000;
 
     // The exit code of the sample application.

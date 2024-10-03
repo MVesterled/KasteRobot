@@ -21,8 +21,21 @@ public:
     //returns transformation matrix
     cv::Mat getHomoMat() const;
 
+    //returns transformation matrix
+    cv::Mat getMapX() const;
+
+    //returns transformation matrix
+    cv::Mat getMapY() const;
+
+    //Vizulize calibration:
+    void visualizeCalib();
+
 private:
     cv::Mat mHomoMat;
+    cv::Mat mMapX;
+    cv::Mat mMapY;
+    std::vector<cv::Point2f> mImagePoints;
+    std::vector<cv::Point2f> mRealWorldPoints;
 };
 
 #endif // CAMERA_H
