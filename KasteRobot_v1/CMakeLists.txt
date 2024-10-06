@@ -4,6 +4,7 @@ project(KasteRobot LANGUAGES CXX)
 # Set C++ standard
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
+set(CMAKE_AUTOMOC ON)
 
 # Platform-specific settings
 if(APPLE)
@@ -35,6 +36,12 @@ else()
     # Find OpenCV
     find_package(OpenCV REQUIRED)
 
+    # Find Qt packages
+    find_package(Qt5 REQUIRED COMPONENTS Core Network)
+
+    # Include the QT directories
+    include_directories(${Qt6Core_INCLUDE_DIRS} ${Qt6Network_INCLUDE_DIRS})
+
     # Find Pylon for Linux
     list(APPEND CMAKE_MODULE_PATH ${CMAKE_CURRENT_SOURCE_DIR})
     find_package(Pylon REQUIRED)
@@ -46,10 +53,10 @@ else()
 endif()
 
 # Add the executable
-add_executable(KasteRobot main.cpp Camera.h Camera.cpp)
+add_executable(KasteRobot main.cpp Camera.h Camera.cpp Gripper.h Gripper.cpp)
 
 # Link libraries (OpenCV, Pylon, ur_rtde)
-target_link_libraries(KasteRobot PRIVATE ${OpenCV_LIBS} ur_rtde::rtde ${PYLON_LIBS})
+target_link_libraries(KasteRobot PRIVATE ${OpenCV_LIBS} ur_rtde::rtde ${PYLON_LIBS} Qt5::Core Qt5::Network)
 
 # Install setup for macOS (optional)
 if(APPLE)

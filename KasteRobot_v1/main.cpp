@@ -6,6 +6,7 @@
 #include <iostream>
 #include <vector>
 #include <math.h>
+#include <QtCore/QCoreApplication>
 
 // project libraries
 #include <opencv2/opencv.hpp>
@@ -14,13 +15,16 @@
 #include <ur_rtde/rtde_io_interface.h>
 #include <pylon/PylonIncludes.h>
 
+
 //Own classes
 #include "Camera.h"
+#include "Gripper.h"
 
 using namespace ur_rtde;
 
 int main(int argc, char* argv[])
 {
+    /*
     //Calibration of camera test that also prints transformation matrix
     Camera visionCam;
     visionCam.calibrateCamera();
@@ -35,6 +39,40 @@ int main(int argc, char* argv[])
               << TablePoint.y << ")" << std::endl;
 
     std::cout << "Program started" << std::endl;
+    */
+
+    QCoreApplication app(argc, argv); // Initialize Qt application
+
+    Gripper gripper; // Create an instance of Gripper
+    gripper.connectToServer("localhost", 12345); // Attempt to connect to the server
+
+    // Check if the connection was successful
+    if (!gripper.isConnected()) {
+        std::cout << "Failed to connect to the server." << std::endl;
+        return 1; // Exit if the connection was not successful
+    }
+    gripper.Command("HOME");
+    gripper.Command("GRIP(40)");
+
+    // Test, sending back and forward
+    /*
+    QTextStream in(stdin); // Create a QTextStream to read from standard input
+    std::cout << "Connected to the server. Type your messages (type 'exit' to quit):" << std::endl;
+    while (true) {
+        QString input; // String to hold user input
+        in >> input; // Read input from the user
+        // Exit condition
+        if (input == "exit") {
+            std::cout << "Exiting..." << std::endl;
+            break; // Exit the loop if the user types 'exit'
+        }
+        // Send the data to the server
+        QByteArray dataToSend = input.toUtf8(); // Convert QString to QByteArray
+        gripper.sendData(dataToSend); // Send data
+    }
+    gripper.disconnectFromServer(); // Disconnect before exiting
+    return 0;
+    */
 
     /*
      * Robot connection test that prints out live shoulder location
