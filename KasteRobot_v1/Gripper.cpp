@@ -158,7 +158,7 @@ bool Gripper::Command(QString command) {
         loop.quit(); // Exit the event loop
     });
 
-    // Step 6: Start the event loop and wait for either response or timeout
+    // Step 6: Start the event loop and wait for either response or timeout!
     loop.exec();
 
     // Step 7: Check the results and return accordingly
