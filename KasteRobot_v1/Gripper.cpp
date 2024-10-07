@@ -102,23 +102,33 @@ void Gripper::onError(QAbstractSocket::SocketError socketError)
 
 
 // ---- Gripper Related ----
+// Usage of the univeral class:
+//
+//  Find the command you want to use in the documentation for the gripper and use it and the input for the function.
+//  Some commands involving complex responses from the gripper is NOT handled by this class. ONLY MOVEMENT BASED COMMANDS!
+//  If in doubt how to use the universal command, please use the predefined commands.
 bool Gripper::Command(QString command) {
     // Step 1: Send the command
-    mSendData = command; // Use the command provided as a parameter
-    sendData(mSendData.toUtf8()); // Send the command as a QByteArray
+    // Use the command provided as a parameter. This in theory can be any command the gripper can preform
+    mSendData = command;
+    // Convert the data to a Qbytearray
+    sendData(mSendData.toUtf8());
 
     // Step 2: Prepare to read the response
     // Trim the command into its basic, so it can be read in the response from the gripper
-    int lastIndex = command.lastIndexOf('(');  // Find the last '('
+    // First find the last '('
+    int lastIndex = command.lastIndexOf('(');
     QString trimmedCommand;
+    // If a '(' was found, trim the command
     if (lastIndex != -1) {
-        trimmedCommand = command.remove(lastIndex, command.length() - lastIndex);  // Remove from '(' to end
+        trimmedCommand = command.remove(lastIndex, command.length() - lastIndex);
     }
-    //If lastIndex is -1, then no '(' was found and the trimmed command is the same as the command
+    // If lastIndex is -1, then no '(' was found and the trimmed command is the same as the command
+    // Should ideally never happen
     else {
         trimmedCommand = command;
     }
-    //Construct the expected responses
+    //Construct the expected responses, setup flags for monitoring and objects for the event loop
     QString expectedAck = "ACK " + trimmedCommand;
     QString expectedFin = "FIN " + trimmedCommand;
     QEventLoop loop; // Create an event loop to wait for signals
@@ -126,9 +136,18 @@ bool Gripper::Command(QString command) {
     bool ackReceived = false;
     bool finReceived = false;
 
-    // Step 3: Connect signals to handle incoming data
+    // Step 3: Connect signals to handle incoming data in a lamda function
+    // Every time the readyRead is triggered in socket, the function triggers with all the varaibles in scope [&].
+    // So if the gripper pre
     connect(socket, &QTcpSocket::readyRead, this, [&]() {
         qDebug() << "Received response: " << mReadDataString;
+
+        // Check for "ERR" in the response, quit the event loop, since no futher response will be recived.
+        if (mReadDataString.contains("ERR")) {
+            qDebug() << "Error detected in response: " << mReadDataString;
+            loop.quit();
+            return;
+        }
 
         // Check for expected ACK response
         if (mReadDataString.trimmed() == expectedAck) {
@@ -144,34 +163,39 @@ bool Gripper::Command(QString command) {
 
         // If both ACK and FIN are received, exit the loop
         if (ackReceived && finReceived) {
-            loop.quit(); // Exit the event loop
+            loop.quit();
         }
     });
 
-    // Step 4: Setup a timeout mechanism
-    timer.setSingleShot(true); // Timer will only fire once
-    timer.start(20000); // Set timeout for 5 seconds
+    // Step 4: Setup a timeout mechanism. Singleshot timer of 20 seconds
+    timer.setSingleShot(true);
+    timer.start(20000);
 
     // Step 5: Connect the timer timeout signal to quit the event loop
     connect(&timer, &QTimer::timeout, &loop, [&]() {
         qDebug() << "Timeout waiting for response";
-        loop.quit(); // Exit the event loop
+        loop.quit();
     });
 
     // Step 6: Start the event loop and wait for either response or timeout!
     loop.exec();
 
-    // Step 7: Check the results and return accordingly
+    // Step 7: Return 1 if both reponsed is receive, or 0 if not
     if (ackReceived && finReceived) {
-        return 1; // Both responses received
-    } else {
-        return 0; // Timeout or invalid response
+        return 1;
+    }
+    else {
+        return 0;
     }
 }
 
 
-// Functions for Gripping
-bool Grip();
+// Functions for Gripping (For noobs)
+bool Gripper::Grip(){
+    // Call the Command function with the force 10, and size 40. Return result.
+    // return Command("GRIP(10, 40)");
+    return Command("HOME()");
+}
 bool Grip(int force);
 bool Grip(int force, int size);
 // Functions for releasing

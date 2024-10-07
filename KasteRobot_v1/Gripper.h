@@ -24,7 +24,7 @@ public:
     bool isConnected() const;
 
     // -- Gripper Related --
-    // Function for homing
+    // Function for universal command of the gripper
     bool Command(QString command);
     // Functions for Gripping
     bool Grip();

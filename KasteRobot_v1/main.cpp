@@ -42,17 +42,21 @@ int main(int argc, char* argv[])
     */
 
     QCoreApplication app(argc, argv); // Initialize Qt application
-
     Gripper gripper; // Create an instance of Gripper
-    gripper.connectToServer("localhost", 12345); // Attempt to connect to the server
+    gripper.connectToServer("192.168.1.20", 1000); // Attempt to connect to the server
 
     // Check if the connection was successful
     if (!gripper.isConnected()) {
         std::cout << "Failed to connect to the server." << std::endl;
         return 1; // Exit if the connection was not successful
     }
-    gripper.Command("HOME");
-    gripper.Command("GRIP(40)");
+    if(gripper.Grip()){
+        qDebug() << "TRUE";
+    }
+    else{
+        qDebug() << "FALSE";
+    }
+
 
     // Test, sending back and forward
     /*
