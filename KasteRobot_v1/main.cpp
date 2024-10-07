@@ -50,8 +50,11 @@ int main(int argc, char* argv[])
         std::cout << "Failed to connect to the server." << std::endl;
         return 1; // Exit if the connection was not successful
     }
-    if(gripper.Grip()){
-        qDebug() << "TRUE";
+
+    if(gripper.Grip(5,40)){
+        qDebug() << "Grip success, releaseing";
+        gripper.Release(10);
+        qDebug() << "Done";
     }
     else{
         qDebug() << "FALSE";

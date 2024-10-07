@@ -182,13 +182,21 @@ bool Gripper::Command(QString command) {
 
     // Step 7: Return 1 if both reponsed is receive, or 0 if not
     if (ackReceived && finReceived) {
+        loop.quit();
         return 1;
     }
     else {
+        loop.quit();
         return 0;
     }
 }
 
+// ---- Functions for General (For noobs) ----
+bool Gripper::Home(){
+    // Call the Command function to home. Return result.
+    // Defualt call
+    return Command("HOME()");
+}
 
 // ---- Functions for Gripping (For noobs) ----
 bool Gripper::Grip(){

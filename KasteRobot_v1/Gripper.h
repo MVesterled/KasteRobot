@@ -26,6 +26,8 @@ public:
     // -- Gripper Related --
     // Function for universal command of the gripper
     bool Command(QString command);
+    // General Commands
+    bool Home();
     // Functions for Gripping
     bool Grip();
     bool Grip(int force);
