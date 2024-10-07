@@ -47,7 +47,9 @@ private slots:
 
 private:
     QTcpSocket *socket;
+    // Bool for connection status
     bool statusConnection;
+    // Member varaiables for sending and reading data
     QString mSendData;
     QByteArray mReadDataArray;
     QString mReadDataString;

@@ -131,8 +131,8 @@ bool Gripper::Command(QString command) {
     //Construct the expected responses, setup flags for monitoring and objects for the event loop
     QString expectedAck = "ACK " + trimmedCommand;
     QString expectedFin = "FIN " + trimmedCommand;
-    QEventLoop loop; // Create an event loop to wait for signals
-    QTimer timer; // Create a timer for timeout
+    QEventLoop loop;
+    QTimer timer;
     bool ackReceived = false;
     bool finReceived = false;
 
@@ -190,17 +190,29 @@ bool Gripper::Command(QString command) {
 }
 
 
-// Functions for Gripping (For noobs)
+// ---- Functions for Gripping (For noobs) ----
 bool Gripper::Grip(){
     // Call the Command function with the force 10, and size 40. Return result.
-    // return Command("GRIP(10, 40)");
-    return Command("HOME()");
+    // Defualt call
+    return Command("GRIP(10, 40)");
 }
-bool Grip(int force);
-bool Grip(int force, int size);
-// Functions for releasing
-bool Release();
-bool Release(int pullback);
+bool Gripper::Grip(int force){
+    // Call the Command function with just a force int
+    return Command("GRIP(" + QString::number(force) + ")");
+}
+bool Gripper::Grip(int force, int size){
+    // Call the Command function with just a force int and a size
+    return Command("GRIP(" + QString::number(force) + "," + QString::number(size) + ")");
+}
+// ---- Functions for releasing (Also for noobs) ----
+bool Gripper::Release(){
+    // Call the command function with the release function, default values for the gripper
+    return Command("RELEASE()");
+}
+bool Gripper::Release(int pullback){
+    // Call the command function with the release function, with desired pullback
+    return Command("RELEASE(" + QString::number(pullback) + ")");
+}
 
 
 
