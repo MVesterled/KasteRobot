@@ -7,6 +7,8 @@
 #include <vector>
 #include <math.h>
 #include <QtCore/QCoreApplication>
+#include <thread>
+#include <chrono>
 
 // project libraries
 #include <opencv2/opencv.hpp>
@@ -51,13 +53,13 @@ int main(int argc, char* argv[])
         return 1; // Exit if the connection was not successful
     }
 
-    if(gripper.Grip(5,40)){
-        qDebug() << "Grip success, releaseing";
-        gripper.Release(10);
-        qDebug() << "Done";
+    if(gripper.Home()){
+        qDebug() << "Step 1 OK";
+        if(gripper.Command("MOVE(20)"))
+            qDebug() << "Step 2 OK";
     }
     else{
-        qDebug() << "FALSE";
+        qDebug() << "FAIL";
     }
 
 
@@ -81,14 +83,23 @@ int main(int argc, char* argv[])
     return 0;
     */
 
-    /*
-     * Robot connection test that prints out live shoulder location
+
+    // Robot connection test that prints out live shoulder location
 
     // Simple example using the RTDE Receive Interface to get the joint positions of the robot
     // OBS TJEK IP
+
+
+    // Simple example using the RTDE IO Interface to set a standard digital output.
+    //RTDEControlInterface ControlInter("192.168.1.54");
+    //ControlInter.moveL({-0.18,0.26,-0.277,2.2,2.52,0.0},);
+
+    RTDEControlInterface rtde_control("192.168.1.54", 500.0, RTDEControlInterface::FLAG_USE_EXT_UR_CAP);
+    rtde_control.moveL({-0.18,0.26,-0.277,2.2,2.52,0.0}, 0.5, 0.2);
+
+    /*
     RTDEReceiveInterface rtde_receive("192.168.1.54");
     std::cout << "is connected: " << rtde_receive.isConnected() << std::endl;
-
     while(true) {
         std::vector<double> joint_positions = rtde_receive.getActualQ();
         //std::cout << "Base: " << joint_positions[0] * (180.0/3.141592653589793238463) << std::endl;
@@ -98,12 +109,9 @@ int main(int argc, char* argv[])
         //std::cout << "Wrist 2: " << joint_positions[4] * (180.0/3.141592653589793238463) << std::endl;
         //std::cout << "Wrist 3: " << joint_positions[5] * (180.0/3.141592653589793238463) << std::endl;
     }
+    */
 
-    // Simple example using the RTDE IO Interface to set a standard digital output.
-    //RTDEIOInterface rtde_io("127.0.0.1");
-    //rtde_io.setStandardDigitalOut(7, true);
 
-*/
 
     /*
      * Live camera feed test

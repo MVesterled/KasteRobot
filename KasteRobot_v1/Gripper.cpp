@@ -116,9 +116,11 @@ bool Gripper::Command(QString command) {
 
     // Step 2: Prepare to read the response
     // Trim the command into its basic, so it can be read in the response from the gripper
+
+    /*
     // First find the last '('
     int lastIndex = command.lastIndexOf('(');
-    QString trimmedCommand;
+    QString trimmedCommand = "";
     // If a '(' was found, trim the command
     if (lastIndex != -1) {
         trimmedCommand = command.remove(lastIndex, command.length() - lastIndex);
@@ -128,6 +130,19 @@ bool Gripper::Command(QString command) {
     else {
         trimmedCommand = command;
     }
+    */
+
+    int lastIndex = command.lastIndexOf('(');
+    QString trimmedCommand = "";
+    QString tempCommand = command; // Create a copy of the original command
+    // If a '(' was found, trim the command
+    if (lastIndex != -1) {
+        trimmedCommand = tempCommand.remove(lastIndex, tempCommand.length() - lastIndex);
+    }
+    else {
+        trimmedCommand = tempCommand;
+    }
+
     //Construct the expected responses, setup flags for monitoring and objects for the event loop
     QString expectedAck = "ACK " + trimmedCommand;
     QString expectedFin = "FIN " + trimmedCommand;
@@ -139,14 +154,15 @@ bool Gripper::Command(QString command) {
     // Step 3: Connect signals to handle incoming data in a lamda function
     // Every time the readyRead is triggered in socket, the function triggers with all the varaibles in scope [&].
     // So if the gripper pre
-    connect(socket, &QTcpSocket::readyRead, this, [&]() {
+    connect(socket, &QTcpSocket::readyRead, &loop, [&]() {
+        //qDebug() << expectedAck;
+
         qDebug() << "Received response: " << mReadDataString;
 
         // Check for "ERR" in the response, quit the event loop, since no futher response will be recived.
         if (mReadDataString.contains("ERR")) {
             qDebug() << "Error detected in response: " << mReadDataString;
-            loop.quit();
-            return;
+            loop.exit(0);
         }
 
         // Check for expected ACK response
@@ -163,7 +179,7 @@ bool Gripper::Command(QString command) {
 
         // If both ACK and FIN are received, exit the loop
         if (ackReceived && finReceived) {
-            loop.quit();
+            loop.exit(1);
         }
     });
 
@@ -174,21 +190,25 @@ bool Gripper::Command(QString command) {
     // Step 5: Connect the timer timeout signal to quit the event loop
     connect(&timer, &QTimer::timeout, &loop, [&]() {
         qDebug() << "Timeout waiting for response";
-        loop.quit();
+        loop.exit(0);
     });
 
     // Step 6: Start the event loop and wait for either response or timeout!
-    loop.exec();
+    if(loop.exec()){
+        return 1;
+    }
+    else{
+        return 0;
+    }
 
-    // Step 7: Return 1 if both reponsed is receive, or 0 if not
+
+    /* Step 7: Return 1 if both reponsed is receive, or 0 if not
     if (ackReceived && finReceived) {
-        loop.quit();
         return 1;
     }
     else {
-        loop.quit();
         return 0;
-    }
+    }*/
 }
 
 // ---- Functions for General (For noobs) ----
