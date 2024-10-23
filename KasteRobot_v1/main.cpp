@@ -6,6 +6,9 @@
 #include <iostream>
 #include <vector>
 #include <math.h>
+#include <QtCore/QCoreApplication>
+#include <thread>
+#include <chrono>
 
 // project libraries
 #include <opencv2/opencv.hpp>
@@ -14,13 +17,16 @@
 #include <ur_rtde/rtde_io_interface.h>
 #include <pylon/PylonIncludes.h>
 
+
 //Own classes
 #include "Camera.h"
+#include "Gripper.h"
 
 using namespace ur_rtde;
 
 int main(int argc, char* argv[])
 {
+    /*
     //Calibration of camera test that also prints transformation matrix
     Camera visionCam;
     visionCam.calibrateCamera();
@@ -35,15 +41,65 @@ int main(int argc, char* argv[])
               << TablePoint.y << ")" << std::endl;
 
     std::cout << "Program started" << std::endl;
+    */
 
+    QCoreApplication app(argc, argv); // Initialize Qt application
+    Gripper gripper; // Create an instance of Gripper
+    gripper.connectToServer("192.168.1.20", 1000); // Attempt to connect to the server
+
+    // Check if the connection was successful
+    if (!gripper.isConnected()) {
+        std::cout << "Failed to connect to the server." << std::endl;
+        return 1; // Exit if the connection was not successful
+    }
+
+    if(gripper.Home()){
+        qDebug() << "Step 1 OK";
+        if(gripper.Command("MOVE(20)"))
+            qDebug() << "Step 2 OK";
+    }
+    else{
+        qDebug() << "FAIL";
+    }
+
+
+    // Test, sending back and forward
     /*
-     * Robot connection test that prints out live shoulder location
+    QTextStream in(stdin); // Create a QTextStream to read from standard input
+    std::cout << "Connected to the server. Type your messages (type 'exit' to quit):" << std::endl;
+    while (true) {
+        QString input; // String to hold user input
+        in >> input; // Read input from the user
+        // Exit condition
+        if (input == "exit") {
+            std::cout << "Exiting..." << std::endl;
+            break; // Exit the loop if the user types 'exit'
+        }
+        // Send the data to the server
+        QByteArray dataToSend = input.toUtf8(); // Convert QString to QByteArray
+        gripper.sendData(dataToSend); // Send data
+    }
+    gripper.disconnectFromServer(); // Disconnect before exiting
+    return 0;
+    */
+
+
+    // Robot connection test that prints out live shoulder location
 
     // Simple example using the RTDE Receive Interface to get the joint positions of the robot
     // OBS TJEK IP
+
+
+    // Simple example using the RTDE IO Interface to set a standard digital output.
+    //RTDEControlInterface ControlInter("192.168.1.54");
+    //ControlInter.moveL({-0.18,0.26,-0.277,2.2,2.52,0.0},);
+
+    RTDEControlInterface rtde_control("192.168.1.54", 500.0, RTDEControlInterface::FLAG_USE_EXT_UR_CAP);
+    rtde_control.moveL({-0.18,0.26,-0.277,2.2,2.52,0.0}, 0.5, 0.2);
+
+    /*
     RTDEReceiveInterface rtde_receive("192.168.1.54");
     std::cout << "is connected: " << rtde_receive.isConnected() << std::endl;
-
     while(true) {
         std::vector<double> joint_positions = rtde_receive.getActualQ();
         //std::cout << "Base: " << joint_positions[0] * (180.0/3.141592653589793238463) << std::endl;
@@ -53,12 +109,9 @@ int main(int argc, char* argv[])
         //std::cout << "Wrist 2: " << joint_positions[4] * (180.0/3.141592653589793238463) << std::endl;
         //std::cout << "Wrist 3: " << joint_positions[5] * (180.0/3.141592653589793238463) << std::endl;
     }
+    */
 
-    // Simple example using the RTDE IO Interface to set a standard digital output.
-    //RTDEIOInterface rtde_io("127.0.0.1");
-    //rtde_io.setStandardDigitalOut(7, true);
 
-*/
 
     /*
      * Live camera feed test
