@@ -76,11 +76,11 @@ std::vector<float> Trajectory::parabel3punkter(std::pair<float, float> punkt1, s
 	float z2 = punkt2.second;
 	float z3 = punkt3.second;
 
-	float nævner = (x1 - x2) * (x1 - x3) * (x2 - x3);
+    float naevner = (x1 - x2) * (x1 - x3) * (x2 - x3);
 
-	float a = (x3 * (z2 - z1) + x2 * (z1 - z3) + x1 * (z3 - z2)) / nævner;
-	float b = (x3 * x3 * (z1 - z2) + x2 * x2 * (z3 - z1) + x1 * x1 * (z2 - z3)) / nævner;
-	float c = (x2 * x3 * (x2 - x3) * z1 + x3 * x1 * (x3 - x1) * z2 + x1 * x2 * (x1 - x2) * z3) / nævner;
+    float a = (x3 * (z2 - z1) + x2 * (z1 - z3) + x1 * (z3 - z2)) / naevner;
+    float b = (x3 * x3 * (z1 - z2) + x2 * x2 * (z3 - z1) + x1 * x1 * (z2 - z3)) / naevner;
+    float c = (x2 * x3 * (x2 - x3) * z1 + x3 * x1 * (x3 - x1) * z2 + x1 * x2 * (x1 - x2) * z3) / naevner;
 
 	return{ a,b,c };
 }
@@ -97,7 +97,7 @@ std::vector<float> Trajectory::getTrajectory(std::vector<float> target) {
 	float targetAngle = findAngle(target);
 	std::vector<float> target2D = rotateZ(-targetAngle, target);
 
-	//tilføjer et offset, så robotten starter kastet 30 cm væk fra sig og ikke lige over sig selv
+    //tilføjer et offset, så robotten starter kastet 30 cm vaek fra sig og ikke lige over sig selv
 	target2D[0] -= mOffset;
 
 	//laver en parabel der beskriver kastet
