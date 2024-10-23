@@ -20,7 +20,7 @@
 using namespace ur_rtde;
 
 //Function for multiplying matrices - temp location
-void mulMat(double** mat1, double** mat2, double** result, int R1, int C1, int R2, int C2) {
+void mulMat(double mat1[4][4], double mat2[4][1], double result[4][1], int R1, int C1, int R2, int C2) {
     // Check if matrix dimensions are compatible for multiplication
     if (C1 != R2) {
         std::cout << "Matrix multiplication not possible. Incompatible dimensions." << std::endl;
@@ -40,7 +40,7 @@ void mulMat(double** mat1, double** mat2, double** result, int R1, int C1, int R
 
 int main(int argc, char* argv[])
 {
-
+/*
     //Calibration of camera test that also prints transformation matrix
     Camera visionCam;
     visionCam.calibrateCamera();
@@ -56,13 +56,22 @@ int main(int argc, char* argv[])
 
     visionCam.visualizeCalib();
     std::cout << "Program started" << std::endl;
-
+*/
+    std::cout << "test" << std::endl;
     //multiplication test
-    double mat1[2][3] = {{1.2, 2.3, 3.4}, {4.5, 5.6, 6.7}};
-    double mat2[3][2] = {{7.8, 8.9}, {9.1, 10.2}, {11.3, 12.4}};
-    double result [2][2];
-    mulMat((double**)mat1, (double**)mat2, (double**)result, 2, 3, 3, 2);
-
+    double invTransformation[4][4] = {
+        {0.0057, -1.0, 0.0013, 436.6030},
+        {-0.9999, -0.0057, 0.0102, 496.1043},
+        {-0.0102, -0.0014, -0.9999, -603.7265},
+        {0, 0, 0, 1}
+    };
+    double point[4][1] = {{299}, {737}, {-151-186}, {1}};
+    double result[4][1] = {0};
+    // Call the multiplication function
+    mulMat(invTransformation, point, result, 4, 4, 4, 1);
+    for (int i = 0; i < 4; i++) {
+        std::cout << result[i][0] << std::endl;
+    }
 // ////////////////////////////////////////////////////////////////////////////////////////////////
     /*
      * Robot connection test that prints out live shoulder location
