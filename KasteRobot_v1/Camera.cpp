@@ -171,4 +171,387 @@ void Camera::visualizeCalib(){
     cv::waitKey(0); // Wait for a key press
 }
 
+void Camera::ballDetect(){
+/*
+int main(int argc, char** argv)
+{
+    //load the iimage, by adding the file path
+    const char* filename = argc >=2 ? argv[1] : "/home/kally/Downloads/ballTestPerspective.jpg";
+    // Loads the image in colour
+    Mat src = imread( samples::findFile( filename ), IMREAD_COLOR );
+    // Check if image is loaded fine
+    if(src.empty()){
+        printf(" Error opening image\n");
+        printf(" Program Arguments: [image_name -- default %s] \n", filename);
+        return EXIT_FAILURE;
+    }
+    //define a matrix to store the gray scale of the image
+    Mat gray;
+    //convert the imagee from BGR to grayscale
+    cvtColor(src, gray, COLOR_BGR2GRAY);
+    //Apply a median filter to reduce noise, with a medium sized kernel  5
+    medianBlur(gray, gray, 5);
+    //create a vec to store the circles, each circle is represented by 3 values: x,y,radius
+    vector<Vec3f> circles;
+    HoughCircles(gray, circles, HOUGH_GRADIENT, 1,
+                 gray.rows/16,  // change this value to detect circles with different distances to each other
+                 100, 30, 10, 30 // change the last two parameters
+            // (min_radius & max_radius) to detect larger circles
+    );
+    for( size_t i = 0; i < circles.size(); i++ ) //loop through the detected circles and draw them on the original image
+    {
+        Vec3i c = circles[i]; //get the ith  circle (x,y,r)
+        Point center = Point(c[0], c[1]); // circle center
+        //draw the cicrle center as a small dot
+        circle( src, center, 1, Scalar(0,100,100), 3, LINE_AA); //draw a small circle in the center with colour (0,100,1)
+        //draw the circle outline with the rr of the detected circle
+        int radius = c[2];//get the radius of the ith circle
+        circle( src, center, radius, Scalar(255,0,255), 3, LINE_AA); //draw the circles perimeter with colour (255,0,255)
+        cout<< center.x << ", "<< center.y <<endl;
+    }
+    imshow("detected circles", src);
+    waitKey();
+    return EXIT_SUCCESS;
+} */
+}
+
+void Camera::colourDetection()
+{
+    /*
+#include "opencv2/imgcodecs.hpp"
+#include "opencv2/highgui.hpp"
+#include "opencv2/imgproc.hpp"
+#include "iostream"
+
+void DetectGreen(cv::Mat input, cv::Mat &output)
+{
+    //Initializes temporary images for computation:
+    cv::Mat imgHSV;
+    //HSV values for the green colour wanted:
+    int hmin = 45, smin = 251, vmin = 180;
+    int hmax = 179, smax = 255, vmax = 255;
+    //Convertion to HSV-colourspace from RGB-colourspace:
+    cv::cvtColor(input, imgHSV, cv::COLOR_BGR2HSV);
+
+    //Sets the HSV colour values:
+    cv::Scalar lower(hmin, smin, vmin);
+    cv::Scalar upper(hmax, smax, vmax);
+
+    //Applying colourfilter to the image:
+    cv::inRange(imgHSV, lower, upper, output);
+    //Shows the colour mask:
+    cv::imshow("Image Green", output);
+    cv::waitKey(0);
+}
+
+void DetectBlue(cv::Mat input, cv::Mat &output)
+{
+    //Initializes temporary images for computation:
+    cv::Mat imgHSV;
+    //HSV values for the blue colour wanted:
+    int hmin = 87, smin = 134, vmin = 13;
+    int hmax = 120, smax = 255, vmax = 84;
+    //Convertion to HSV-colourspace from RGB-colourspace:
+    cv::cvtColor(input, imgHSV, cv::COLOR_BGR2HSV);
+
+    //Sets the HSV colour values:
+    cv::Scalar lower(hmin, smin, vmin);
+    cv::Scalar upper(hmax, smax, vmax);
+
+    //Applying colourfilter to the image:
+    cv::inRange(imgHSV, lower, upper, output);
+    //Shows the colour mask:
+    cv::imshow("Image Blue", output);
+    cv::waitKey(0);
+}
+
+void DetectRed(cv::Mat input, cv::Mat &output)
+{
+    //Initializes temporary images for computation:
+    cv::Mat imgHSV;
+    //HSV values for the red colour wanted:
+    int hmin = 0, smin = 0, vmin = 71;
+    int hmax = 13, smax = 255, vmax = 215;
+    //Convertion to HSV-colourspace from RGB-colourspace:
+    cv::cvtColor(input, imgHSV, cv::COLOR_BGR2HSV);
+
+    //Sets the HSV colour values:
+    cv::Scalar lower(hmin, smin, vmin);
+    cv::Scalar upper(hmax, smax, vmax);
+
+    //Applying colourfilter to the image:
+    cv::inRange(imgHSV, lower, upper, output);
+    //Shows the colour mask:
+    cv::imshow("Image Red", output);
+    cv::waitKey(0);
+}
+
+void DetectOrange(cv::Mat input, cv::Mat &output)
+{
+    //Initializes temporary images for computation:
+    cv::Mat imgHSV;
+    //HSV values for the orange colour wanted:
+    int hmin = 0, smin = 255, vmin = 66;
+    int hmax = 20, smax = 255, vmax = 165;
+    //Convertion to HSV-colourspace from RGB-colourspace:
+    cv::cvtColor(input, imgHSV, cv::COLOR_BGR2HSV);
+
+    //Sets the HSV colour values:
+    cv::Scalar lower(hmin, smin, vmin);
+    cv::Scalar upper(hmax, smax, vmax);
+
+    //Applying colourfilter to the image:
+    cv::inRange(imgHSV, lower, upper, output);
+    //Shows the colour mask:
+    cv::imshow("Image Orange", output);
+    cv::waitKey(0);
+}
+
+void DetectYellow(cv::Mat input, cv::Mat &output)
+{
+    //Initializes temporary images for computation:
+    cv::Mat imgHSV;
+    //HSV values for the yellow colour wanted:
+    int hmin = 25, smin = 255, vmin = 66;
+    int hmax = 38, smax = 255, vmax = 165;
+    //Convertere til HSV-colourspace fra RGB-colourspace
+    cv::cvtColor(input, imgHSV, cv::COLOR_BGR2HSV);
+
+    //Sets the HSV colour values:
+    cv::Scalar lower(hmin, smin, vmin);
+    cv::Scalar upper(hmax, smax, vmax);
+    //Applying colourfilter to the image:
+    cv::inRange(imgHSV, lower, upper, output);
+    //Shows the colour mask:
+    cv::imshow("Image Yellow", output);
+    cv::waitKey(0);
+}
+
+void CalibrateColours(cv::Mat input)
+{
+    //Initializes temporary images for computation:
+    cv::Mat imgHSV, mask;
+    //initialize min og max HSV values for colourspace:
+    int hmin = 0, smin = 0, vmin = 0;
+    int hmax = 179, smax = 255, vmax = 255;
+    //Converters to HSV Colourspace:
+    cv::cvtColor(input, imgHSV, cv::COLOR_BGR2HSV);
+    //Creates trackbars:
+    cv::namedWindow("Trackbars", (640, 200));
+    cv::createTrackbar("Hue min", "Trackbars", &hmin, 179);
+    cv::createTrackbar("Hue max", "Trackbars", &hmax, 179);
+    cv::createTrackbar("Sat min", "Trackbars", &smin, 255);
+    cv::createTrackbar("Sat max", "Trackbars", &smax, 255);
+    cv::createTrackbar("Val min", "Trackbars", &vmin, 255);
+    cv::createTrackbar("Val max", "Trackbars", &vmax, 255);
+
+    //Runs the program as a video while the values get updated from the trackbars:
+    while (true){
+        //Sets upper and lower limits:
+        cv::Scalar lower(hmin, smin, vmin);
+        cv::Scalar upper(hmax, smax, vmax);
+        //Applying colourfilter to the image:
+        cv::inRange(imgHSV, lower, upper, mask);
+        //Show the colour mask:
+        cv::resize(mask, mask, cv::Size(mask.cols * 0.8, mask.rows * 0.8));
+        cv::imshow("Image mask", mask);
+        cv::waitKey(1);
+    }
+}
+
+int main()
+{
+    // Load an image from a file
+    std::string imagePath = "/home/kally/Downloads/ballTest.jpg";  // Replace with the actual path to your image
+    cv::Mat inputImage = cv::imread(imagePath);
+
+    cv::imshow("Input", inputImage);
+    cv::waitKey(0);
+    CalibrateColours(inputImage);
+    // Check if the image was loaded successfully
+    if (inputImage.empty())
+    {
+        std::cout << "Could not load image. Check the file path." << std::endl;
+        return -1;
+    }
+
+    // Create a Mat to store the output
+    cv::Mat outputImage;
+
+    // Call the DetectGreen function
+    DetectGreen(inputImage, outputImage);
+
+
+
+    return 0;
+}#include "opencv2/imgcodecs.hpp"
+        #include "opencv2/highgui.hpp"
+        #include "opencv2/imgproc.hpp"
+        #include "iostream"
+
+        void DetectGreen(cv::Mat input, cv::Mat &output)
+        {
+            //Initializes temporary images for computation:
+            cv::Mat imgHSV;
+            //HSV values for the green colour wanted:
+            int hmin = 45, smin = 251, vmin = 180;
+            int hmax = 179, smax = 255, vmax = 255;
+            //Convertion to HSV-colourspace from RGB-colourspace:
+            cv::cvtColor(input, imgHSV, cv::COLOR_BGR2HSV);
+
+            //Sets the HSV colour values:
+            cv::Scalar lower(hmin, smin, vmin);
+            cv::Scalar upper(hmax, smax, vmax);
+
+            //Applying colourfilter to the image:
+            cv::inRange(imgHSV, lower, upper, output);
+            //Shows the colour mask:
+            cv::imshow("Image Green", output);
+            cv::waitKey(0);
+        }
+
+        void DetectBlue(cv::Mat input, cv::Mat &output)
+        {
+            //Initializes temporary images for computation:
+            cv::Mat imgHSV;
+            //HSV values for the blue colour wanted:
+            int hmin = 87, smin = 134, vmin = 13;
+            int hmax = 120, smax = 255, vmax = 84;
+            //Convertion to HSV-colourspace from RGB-colourspace:
+            cv::cvtColor(input, imgHSV, cv::COLOR_BGR2HSV);
+
+            //Sets the HSV colour values:
+            cv::Scalar lower(hmin, smin, vmin);
+            cv::Scalar upper(hmax, smax, vmax);
+
+            //Applying colourfilter to the image:
+            cv::inRange(imgHSV, lower, upper, output);
+            //Shows the colour mask:
+            cv::imshow("Image Blue", output);
+            cv::waitKey(0);
+        }
+
+        void DetectRed(cv::Mat input, cv::Mat &output)
+        {
+            //Initializes temporary images for computation:
+            cv::Mat imgHSV;
+            //HSV values for the red colour wanted:
+            int hmin = 0, smin = 0, vmin = 71;
+            int hmax = 13, smax = 255, vmax = 215;
+            //Convertion to HSV-colourspace from RGB-colourspace:
+            cv::cvtColor(input, imgHSV, cv::COLOR_BGR2HSV);
+
+            //Sets the HSV colour values:
+            cv::Scalar lower(hmin, smin, vmin);
+            cv::Scalar upper(hmax, smax, vmax);
+
+            //Applying colourfilter to the image:
+            cv::inRange(imgHSV, lower, upper, output);
+            //Shows the colour mask:
+            cv::imshow("Image Red", output);
+            cv::waitKey(0);
+        }
+
+        void DetectOrange(cv::Mat input, cv::Mat &output)
+        {
+            //Initializes temporary images for computation:
+            cv::Mat imgHSV;
+            //HSV values for the orange colour wanted:
+            int hmin = 0, smin = 255, vmin = 66;
+            int hmax = 20, smax = 255, vmax = 165;
+            //Convertion to HSV-colourspace from RGB-colourspace:
+            cv::cvtColor(input, imgHSV, cv::COLOR_BGR2HSV);
+
+            //Sets the HSV colour values:
+            cv::Scalar lower(hmin, smin, vmin);
+            cv::Scalar upper(hmax, smax, vmax);
+
+            //Applying colourfilter to the image:
+            cv::inRange(imgHSV, lower, upper, output);
+            //Shows the colour mask:
+            cv::imshow("Image Orange", output);
+            cv::waitKey(0);
+        }
+
+        void DetectYellow(cv::Mat input, cv::Mat &output)
+        {
+            //Initializes temporary images for computation:
+            cv::Mat imgHSV;
+            //HSV values for the yellow colour wanted:
+            int hmin = 25, smin = 255, vmin = 66;
+            int hmax = 38, smax = 255, vmax = 165;
+            //Convertere til HSV-colourspace fra RGB-colourspace
+            cv::cvtColor(input, imgHSV, cv::COLOR_BGR2HSV);
+
+            //Sets the HSV colour values:
+            cv::Scalar lower(hmin, smin, vmin);
+            cv::Scalar upper(hmax, smax, vmax);
+            //Applying colourfilter to the image:
+            cv::inRange(imgHSV, lower, upper, output);
+            //Shows the colour mask:
+            cv::imshow("Image Yellow", output);
+            cv::waitKey(0);
+        }
+
+        void CalibrateColours(cv::Mat input)
+        {
+            //Initializes temporary images for computation:
+            cv::Mat imgHSV, mask;
+            //initialize min og max HSV values for colourspace:
+            int hmin = 0, smin = 0, vmin = 0;
+            int hmax = 179, smax = 255, vmax = 255;
+            //Converters to HSV Colourspace:
+            cv::cvtColor(input, imgHSV, cv::COLOR_BGR2HSV);
+            //Creates trackbars:
+            cv::namedWindow("Trackbars", (640, 200));
+            cv::createTrackbar("Hue min", "Trackbars", &hmin, 179);
+            cv::createTrackbar("Hue max", "Trackbars", &hmax, 179);
+            cv::createTrackbar("Sat min", "Trackbars", &smin, 255);
+            cv::createTrackbar("Sat max", "Trackbars", &smax, 255);
+            cv::createTrackbar("Val min", "Trackbars", &vmin, 255);
+            cv::createTrackbar("Val max", "Trackbars", &vmax, 255);
+
+            //Runs the program as a video while the values get updated from the trackbars:
+            while (true){
+                //Sets upper and lower limits:
+                cv::Scalar lower(hmin, smin, vmin);
+                cv::Scalar upper(hmax, smax, vmax);
+                //Applying colourfilter to the image:
+                cv::inRange(imgHSV, lower, upper, mask);
+                //Show the colour mask:
+                cv::resize(mask, mask, cv::Size(mask.cols * 0.8, mask.rows * 0.8));
+                cv::imshow("Image mask", mask);
+                cv::waitKey(1);
+            }
+        }
+
+        int main()
+        {
+            // Load an image from a file
+            std::string imagePath = "/home/kally/Downloads/ballTest.jpg";  // Replace with the actual path to your image
+            cv::Mat inputImage = cv::imread(imagePath);
+
+            cv::imshow("Input", inputImage);
+            cv::waitKey(0);
+            CalibrateColours(inputImage);
+            // Check if the image was loaded successfully
+            if (inputImage.empty())
+            {
+                std::cout << "Could not load image. Check the file path." << std::endl;
+                return -1;
+            }
+
+            // Create a Mat to store the output
+            cv::Mat outputImage;
+
+            // Call the DetectGreen function
+            DetectGreen(inputImage, outputImage);
+
+
+
+            return 0;
+        }
+        */
+}
+
 

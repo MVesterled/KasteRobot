@@ -30,6 +30,10 @@ public:
     //Vizulize calibration:
     void visualizeCalib();
 
+    void ballDetect();
+
+    void colourDetection();
+
 private:
     cv::Mat mHomoMat;
     cv::Mat mMapX;
