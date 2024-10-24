@@ -28,11 +28,20 @@ public:
     cv::Mat getMapY() const;
 
     //Vizulize calibration:
-    void visualizeCalib();
+    void transformPicture();
 
+    //function to return the center of balls
     void ballDetect();
+    cv::Point2f nextPoint();
 
+    //finds the balls with coulerr
+    void detectGreen();
+    void detectRed();
+    void detectBlue();
     void colourDetection();
+
+    //Function to test camera live feed
+    void liveFeed();
 
 private:
     cv::Mat mHomoMat;
@@ -40,6 +49,10 @@ private:
     cv::Mat mMapY;
     std::vector<cv::Point2f> mImagePoints;
     std::vector<cv::Point2f> mRealWorldPoints;
+    std::vector<cv::Point2f> ballPoints;
+    cv::Mat greenBallPicture;
+    cv::Mat redBallPicture;
+    cv::Mat blueBallPicture;
 };
 
 #endif // CAMERA_H

@@ -153,7 +153,7 @@ cv::Mat Camera::getMapY() const{
 }
 
 //Vizulize calibration:
-void Camera::visualizeCalib(){
+void Camera::transformPicture(){
     cv::Mat input = cv::imread("/home/matmat1000/Documents/ballTest.jpg");
     cv::Mat output;
     cv::warpPerspective(input, output, mHomoMat, cv::Size(800,750)); // Use input size or desired output size
@@ -172,47 +172,70 @@ void Camera::visualizeCalib(){
 }
 
 void Camera::ballDetect(){
-/*
-int main(int argc, char** argv)
-{
-    //load the iimage, by adding the file path
-    const char* filename = argc >=2 ? argv[1] : "/home/kally/Downloads/ballTestPerspective.jpg";
-    // Loads the image in colour
-    Mat src = imread( samples::findFile( filename ), IMREAD_COLOR );
-    // Check if image is loaded fine
-    if(src.empty()){
-        printf(" Error opening image\n");
-        printf(" Program Arguments: [image_name -- default %s] \n", filename);
-        return EXIT_FAILURE;
-    }
-    //define a matrix to store the gray scale of the image
-    Mat gray;
-    //convert the imagee from BGR to grayscale
-    cvtColor(src, gray, COLOR_BGR2GRAY);
+    //loads in image as grayscale
+    cv::Mat src = cv::imread("/home/matmat1000/Documents/ballTestPerspective.jpg", cv::IMREAD_GRAYSCALE);
+    cv::Mat src_Color = cv::imread("/home/matmat1000/Documents/ballTestPerspective.jpg", cv::IMREAD_COLOR);
+
+
     //Apply a median filter to reduce noise, with a medium sized kernel  5
-    medianBlur(gray, gray, 5);
+    cv::medianBlur(src, src, 5);
+
     //create a vec to store the circles, each circle is represented by 3 values: x,y,radius
-    vector<Vec3f> circles;
-    HoughCircles(gray, circles, HOUGH_GRADIENT, 1,
-                 gray.rows/16,  // change this value to detect circles with different distances to each other
-                 100, 30, 10, 30 // change the last two parameters
-            // (min_radius & max_radius) to detect larger circles
-    );
+    std::vector<cv::Vec3f> circles;
+    cv::HoughCircles(src, circles, cv::HOUGH_GRADIENT, 1,
+                 src.rows/16,  // change this value to detect circles with different distances to each other
+                 100, 30, 10, 30); // change the last two parameters (min radius and max radius)
+
+
+    //vizulice  circles
     for( size_t i = 0; i < circles.size(); i++ ) //loop through the detected circles and draw them on the original image
     {
-        Vec3i c = circles[i]; //get the ith  circle (x,y,r)
-        Point center = Point(c[0], c[1]); // circle center
+        cv::Vec3i c = circles[i]; //get the ith  circle (x,y,r)
+        cv::Point2f center = cv::Point2f(c[0], c[1]); // circle center
         //draw the cicrle center as a small dot
-        circle( src, center, 1, Scalar(0,100,100), 3, LINE_AA); //draw a small circle in the center with colour (0,100,1)
+        cv::circle( src_Color, center, 1, cv::Scalar(0,100,100), 3, cv::LINE_AA); //draw a small circle in the center with colour (0,100,1)
         //draw the circle outline with the rr of the detected circle
         int radius = c[2];//get the radius of the ith circle
-        circle( src, center, radius, Scalar(255,0,255), 3, LINE_AA); //draw the circles perimeter with colour (255,0,255)
-        cout<< center.x << ", "<< center.y <<endl;
+        circle( src_Color, center, radius, cv::Scalar(255,0,255), 3, cv::LINE_AA); //draw the circles perimeter with colour (255,0,255)
+        //std::cout<< center.x << ", "<< center.y << std::endl;
+        ballPoints.emplace_back(cv::Point2f(c[0], c[1]));
     }
-    imshow("detected circles", src);
-    waitKey();
-    return EXIT_SUCCESS;
-} */
+    imshow("detected circles", src_Color);
+    cv::waitKey();
+}
+
+cv::Point2f Camera::nextPoint()
+{
+    if (ballPoints.empty())
+        return cv::Point2f(-500.0, -500.0);
+
+    cv::Point2f Temp = ballPoints[ballPoints.size()-1];
+    ballPoints.pop_back();
+
+    return Temp;
+
+}
+
+void Camera::detectGreen()
+{
+    cv::Mat input = cv::imread("/home/matmat1000/Documents/ballTestPerspective.jpg", cv::IMREAD_COLOR);
+    //Initializes temporary images for computation:
+    cv::Mat imgHSV;
+    //HSV values for the green colour wanted:
+    int hmin = 54, smin = 223, vmin = 90;
+    int hmax = 83, smax = 255, vmax = 255;
+    //Convertion to HSV-colourspace from RGB-colourspace:
+    cv::cvtColor(input, imgHSV, cv::COLOR_BGR2HSV);
+
+    //Sets the HSV colour values:
+    cv::Scalar lower(hmin, smin, vmin);
+    cv::Scalar upper(hmax, smax, vmax);
+
+    //Applying colourfilter to the image:
+    cv::inRange(imgHSV, lower, upper, greenBallPicture);
+    //Shows the colour mask:
+    cv::imshow("Image Green", greenBallPicture);
+    cv::waitKey(0);
 }
 
 void Camera::colourDetection()
@@ -228,8 +251,8 @@ void DetectGreen(cv::Mat input, cv::Mat &output)
     //Initializes temporary images for computation:
     cv::Mat imgHSV;
     //HSV values for the green colour wanted:
-    int hmin = 45, smin = 251, vmin = 180;
-    int hmax = 179, smax = 255, vmax = 255;
+    int hmin = 54, smin = 223, vmin = 90;
+    int hmax = 83, smax = 255, vmax = 255;
     //Convertion to HSV-colourspace from RGB-colourspace:
     cv::cvtColor(input, imgHSV, cv::COLOR_BGR2HSV);
 
@@ -270,8 +293,8 @@ void DetectRed(cv::Mat input, cv::Mat &output)
     //Initializes temporary images for computation:
     cv::Mat imgHSV;
     //HSV values for the red colour wanted:
-    int hmin = 0, smin = 0, vmin = 71;
-    int hmax = 13, smax = 255, vmax = 215;
+    int hmin = 0, smin = 152, vmin = 141;
+    int hmax = 20, smax = 255, vmax = 222;
     //Convertion to HSV-colourspace from RGB-colourspace:
     cv::cvtColor(input, imgHSV, cv::COLOR_BGR2HSV);
 
@@ -283,47 +306,6 @@ void DetectRed(cv::Mat input, cv::Mat &output)
     cv::inRange(imgHSV, lower, upper, output);
     //Shows the colour mask:
     cv::imshow("Image Red", output);
-    cv::waitKey(0);
-}
-
-void DetectOrange(cv::Mat input, cv::Mat &output)
-{
-    //Initializes temporary images for computation:
-    cv::Mat imgHSV;
-    //HSV values for the orange colour wanted:
-    int hmin = 0, smin = 255, vmin = 66;
-    int hmax = 20, smax = 255, vmax = 165;
-    //Convertion to HSV-colourspace from RGB-colourspace:
-    cv::cvtColor(input, imgHSV, cv::COLOR_BGR2HSV);
-
-    //Sets the HSV colour values:
-    cv::Scalar lower(hmin, smin, vmin);
-    cv::Scalar upper(hmax, smax, vmax);
-
-    //Applying colourfilter to the image:
-    cv::inRange(imgHSV, lower, upper, output);
-    //Shows the colour mask:
-    cv::imshow("Image Orange", output);
-    cv::waitKey(0);
-}
-
-void DetectYellow(cv::Mat input, cv::Mat &output)
-{
-    //Initializes temporary images for computation:
-    cv::Mat imgHSV;
-    //HSV values for the yellow colour wanted:
-    int hmin = 25, smin = 255, vmin = 66;
-    int hmax = 38, smax = 255, vmax = 165;
-    //Convertere til HSV-colourspace fra RGB-colourspace
-    cv::cvtColor(input, imgHSV, cv::COLOR_BGR2HSV);
-
-    //Sets the HSV colour values:
-    cv::Scalar lower(hmin, smin, vmin);
-    cv::Scalar upper(hmax, smax, vmax);
-    //Applying colourfilter to the image:
-    cv::inRange(imgHSV, lower, upper, output);
-    //Shows the colour mask:
-    cv::imshow("Image Yellow", output);
     cv::waitKey(0);
 }
 
@@ -384,174 +366,153 @@ int main()
 
 
     return 0;
-}#include "opencv2/imgcodecs.hpp"
-        #include "opencv2/highgui.hpp"
-        #include "opencv2/imgproc.hpp"
-        #include "iostream"
-
-        void DetectGreen(cv::Mat input, cv::Mat &output)
-        {
-            //Initializes temporary images for computation:
-            cv::Mat imgHSV;
-            //HSV values for the green colour wanted:
-            int hmin = 45, smin = 251, vmin = 180;
-            int hmax = 179, smax = 255, vmax = 255;
-            //Convertion to HSV-colourspace from RGB-colourspace:
-            cv::cvtColor(input, imgHSV, cv::COLOR_BGR2HSV);
-
-            //Sets the HSV colour values:
-            cv::Scalar lower(hmin, smin, vmin);
-            cv::Scalar upper(hmax, smax, vmax);
-
-            //Applying colourfilter to the image:
-            cv::inRange(imgHSV, lower, upper, output);
-            //Shows the colour mask:
-            cv::imshow("Image Green", output);
-            cv::waitKey(0);
-        }
-
-        void DetectBlue(cv::Mat input, cv::Mat &output)
-        {
-            //Initializes temporary images for computation:
-            cv::Mat imgHSV;
-            //HSV values for the blue colour wanted:
-            int hmin = 87, smin = 134, vmin = 13;
-            int hmax = 120, smax = 255, vmax = 84;
-            //Convertion to HSV-colourspace from RGB-colourspace:
-            cv::cvtColor(input, imgHSV, cv::COLOR_BGR2HSV);
-
-            //Sets the HSV colour values:
-            cv::Scalar lower(hmin, smin, vmin);
-            cv::Scalar upper(hmax, smax, vmax);
-
-            //Applying colourfilter to the image:
-            cv::inRange(imgHSV, lower, upper, output);
-            //Shows the colour mask:
-            cv::imshow("Image Blue", output);
-            cv::waitKey(0);
-        }
-
-        void DetectRed(cv::Mat input, cv::Mat &output)
-        {
-            //Initializes temporary images for computation:
-            cv::Mat imgHSV;
-            //HSV values for the red colour wanted:
-            int hmin = 0, smin = 0, vmin = 71;
-            int hmax = 13, smax = 255, vmax = 215;
-            //Convertion to HSV-colourspace from RGB-colourspace:
-            cv::cvtColor(input, imgHSV, cv::COLOR_BGR2HSV);
-
-            //Sets the HSV colour values:
-            cv::Scalar lower(hmin, smin, vmin);
-            cv::Scalar upper(hmax, smax, vmax);
-
-            //Applying colourfilter to the image:
-            cv::inRange(imgHSV, lower, upper, output);
-            //Shows the colour mask:
-            cv::imshow("Image Red", output);
-            cv::waitKey(0);
-        }
-
-        void DetectOrange(cv::Mat input, cv::Mat &output)
-        {
-            //Initializes temporary images for computation:
-            cv::Mat imgHSV;
-            //HSV values for the orange colour wanted:
-            int hmin = 0, smin = 255, vmin = 66;
-            int hmax = 20, smax = 255, vmax = 165;
-            //Convertion to HSV-colourspace from RGB-colourspace:
-            cv::cvtColor(input, imgHSV, cv::COLOR_BGR2HSV);
-
-            //Sets the HSV colour values:
-            cv::Scalar lower(hmin, smin, vmin);
-            cv::Scalar upper(hmax, smax, vmax);
-
-            //Applying colourfilter to the image:
-            cv::inRange(imgHSV, lower, upper, output);
-            //Shows the colour mask:
-            cv::imshow("Image Orange", output);
-            cv::waitKey(0);
-        }
-
-        void DetectYellow(cv::Mat input, cv::Mat &output)
-        {
-            //Initializes temporary images for computation:
-            cv::Mat imgHSV;
-            //HSV values for the yellow colour wanted:
-            int hmin = 25, smin = 255, vmin = 66;
-            int hmax = 38, smax = 255, vmax = 165;
-            //Convertere til HSV-colourspace fra RGB-colourspace
-            cv::cvtColor(input, imgHSV, cv::COLOR_BGR2HSV);
-
-            //Sets the HSV colour values:
-            cv::Scalar lower(hmin, smin, vmin);
-            cv::Scalar upper(hmax, smax, vmax);
-            //Applying colourfilter to the image:
-            cv::inRange(imgHSV, lower, upper, output);
-            //Shows the colour mask:
-            cv::imshow("Image Yellow", output);
-            cv::waitKey(0);
-        }
-
-        void CalibrateColours(cv::Mat input)
-        {
-            //Initializes temporary images for computation:
-            cv::Mat imgHSV, mask;
-            //initialize min og max HSV values for colourspace:
-            int hmin = 0, smin = 0, vmin = 0;
-            int hmax = 179, smax = 255, vmax = 255;
-            //Converters to HSV Colourspace:
-            cv::cvtColor(input, imgHSV, cv::COLOR_BGR2HSV);
-            //Creates trackbars:
-            cv::namedWindow("Trackbars", (640, 200));
-            cv::createTrackbar("Hue min", "Trackbars", &hmin, 179);
-            cv::createTrackbar("Hue max", "Trackbars", &hmax, 179);
-            cv::createTrackbar("Sat min", "Trackbars", &smin, 255);
-            cv::createTrackbar("Sat max", "Trackbars", &smax, 255);
-            cv::createTrackbar("Val min", "Trackbars", &vmin, 255);
-            cv::createTrackbar("Val max", "Trackbars", &vmax, 255);
-
-            //Runs the program as a video while the values get updated from the trackbars:
-            while (true){
-                //Sets upper and lower limits:
-                cv::Scalar lower(hmin, smin, vmin);
-                cv::Scalar upper(hmax, smax, vmax);
-                //Applying colourfilter to the image:
-                cv::inRange(imgHSV, lower, upper, mask);
-                //Show the colour mask:
-                cv::resize(mask, mask, cv::Size(mask.cols * 0.8, mask.rows * 0.8));
-                cv::imshow("Image mask", mask);
-                cv::waitKey(1);
-            }
-        }
-
-        int main()
-        {
-            // Load an image from a file
-            std::string imagePath = "/home/kally/Downloads/ballTest.jpg";  // Replace with the actual path to your image
-            cv::Mat inputImage = cv::imread(imagePath);
-
-            cv::imshow("Input", inputImage);
-            cv::waitKey(0);
-            CalibrateColours(inputImage);
-            // Check if the image was loaded successfully
-            if (inputImage.empty())
-            {
-                std::cout << "Could not load image. Check the file path." << std::endl;
-                return -1;
-            }
-
-            // Create a Mat to store the output
-            cv::Mat outputImage;
-
-            // Call the DetectGreen function
-            DetectGreen(inputImage, outputImage);
-
-
-
-            return 0;
-        }
+}
         */
+}
+
+void Camera::liveFeed()
+{
+    /*
+    //Live camera feed test
+    int myExposure = 30000;
+
+    // The exit code of the sample application.
+    int exitCode = 0;
+
+    // Automagically call PylonInitialize and PylonTerminate to ensure the pylon runtime system
+    // is initialized during the lifetime of this object.
+    Pylon::PylonAutoInitTerm autoInitTerm;
+
+    try
+    {
+        // Create an instant camera object with the camera device found first.
+        Pylon::CInstantCamera camera( Pylon::CTlFactory::GetInstance().CreateFirstDevice());
+
+        // Get a camera nodemap in order to access camera parameters.
+        GenApi::INodeMap& nodemap= camera.GetNodeMap();
+
+        // Open the camera before accessing any parameters.
+        camera.Open();
+        // Create pointers to access the camera Width and Height parameters.
+        GenApi::CIntegerPtr width= nodemap.GetNode("Width");
+        GenApi::CIntegerPtr height= nodemap.GetNode("Height");
+
+        // The parameter MaxNumBuffer can be used to control the count of buffers
+        // allocated for grabbing. The default value of this parameter is 10.
+        //camera.MaxNumBuffer = 5;
+
+        // Create a pylon ImageFormatConverter object.
+        Pylon::CImageFormatConverter formatConverter;
+        // Specify the output pixel format.
+        formatConverter.OutputPixelFormat= Pylon::PixelType_BGR8packed;
+        // Create a PylonImage that will be used to create OpenCV images later.
+        Pylon::CPylonImage pylonImage;
+
+        // Create an OpenCV image.
+        cv::Mat openCvImage;
+
+
+        // Set exposure to manual
+        GenApi::CEnumerationPtr exposureAuto( nodemap.GetNode( "ExposureAuto"));
+        if ( GenApi::IsWritable( exposureAuto)){
+            exposureAuto->FromString("Off");
+            std::cout << "Exposure auto disabled." << std::endl;
+        }
+
+        // Set custom exposure
+        GenApi::CFloatPtr exposureTime = nodemap.GetNode("ExposureTime");
+        std::cout << "Old exposure: " << exposureTime->GetValue() << std::endl;
+        if(exposureTime.IsValid()) {
+            if(myExposure >= exposureTime->GetMin() && myExposure <= exposureTime->GetMax()) {
+                exposureTime->SetValue(myExposure);
+            }else {
+                exposureTime->SetValue(exposureTime->GetMin());
+                std::cout << ">> Exposure has been set with the minimum available value." << std::endl;
+                std::cout << ">> The available exposure range is [" << exposureTime->GetMin() << " - " << exposureTime->GetMax() << "] (us)" << std::endl;
+            }
+        }else {
+
+            std::cout << ">> Failed to set exposure value." << std::endl;
+            return false;
+        }
+        std::cout << "New exposure: " << exposureTime->GetValue() << std::endl;
+
+        // Start the grabbing of c_countOfImagesToGrab images.
+        // The camera device is parameterized with a default configuration which
+        // sets up free-running continuous acquisition.
+        camera.StartGrabbing(Pylon::GrabStrategy_LatestImageOnly);
+
+        // This smart pointer will receive the grab result data.
+        Pylon::CGrabResultPtr ptrGrabResult;
+
+        // image grabbing loop
+        int frame = 1;
+        while ( camera.IsGrabbing())
+        {
+            // Wait for an image and then retrieve it. A timeout of 5000 ms is used.
+            camera.RetrieveResult( 5000, ptrGrabResult, Pylon::TimeoutHandling_ThrowException);
+
+            // Image grabbed successfully?
+            if (ptrGrabResult->GrabSucceeded())
+            {
+                // Access the image data.
+                //cout << "SizeX: " << ptrGrabResult->GetWidth() << endl;
+                //cout << "SizeY: " << ptrGrabResult->GetHeight() << endl;
+
+                // Convert the grabbed buffer to a pylon image.
+                formatConverter.Convert(pylonImage, ptrGrabResult);
+
+                // Create an OpenCV image from a pylon image.
+                openCvImage= cv::Mat(ptrGrabResult->GetHeight(), ptrGrabResult->GetWidth(), CV_8UC3, (uint8_t *) pylonImage.GetBuffer());
+
+
+
+                //////////////////////////////////////////////////////
+                //////////// Here your code begins ///////////////////
+                //////////////////////////////////////////////////////
+
+                // Create an OpenCV display window.
+                cv::namedWindow( "myWindow", cv::WINDOW_NORMAL); // other options: CV_AUTOSIZE, CV_FREERATIO
+
+                // Display the current image in the OpenCV display window.
+                cv::imshow( "myWindow", openCvImage);
+
+                // Detect key press and quit if 'q' is pressed
+                int keyPressed = cv::waitKey(1);
+                if(keyPressed == 'q'){ //quit
+                    std::cout << "Shutting down camera..." << std::endl;
+                    camera.Close();
+                    std::cout << "Camera successfully closed." << std::endl;
+                    break;
+                }
+
+                ////////////////////////////////////////////////////
+                //////////// Here your code ends ///////////////////
+                ////////////////////////////////////////////////////
+
+
+
+
+                frame++;
+
+            }
+            else
+            {
+                std::cout << "Error: " << ptrGrabResult->GetErrorCode() << " " << ptrGrabResult->GetErrorDescription() << std::endl;
+            }
+        }
+
+    }
+    catch (GenICam::GenericException &e)
+    {
+        // Error handling.
+        std::cerr << "An exception occurred." << std::endl
+                  << e.GetDescription() << std::endl;
+        exitCode = 1;
+    }
+
+    return exitCode;
+*/
 }
 
 
