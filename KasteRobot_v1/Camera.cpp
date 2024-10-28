@@ -1,6 +1,8 @@
 #include "Camera.h"
 
-Camera::Camera(){}
+Camera::Camera(){
+    mPicture = cv::imread("/home/matmat1000/Documents/ballTestPerspective.jpg");
+}
 
 //Function that calibrates the camera view
 void Camera::calibrateCamera(){
@@ -74,11 +76,11 @@ void Camera::calibrateCamera(){
     std::cout << "Calibrating..." << std::endl;
     // Finds the error in the calibration
     float error = cv::calibrateCamera(Q, q, frameSize, K, k, rvecs, tvecs, stdIntrinsics, stdExtrinsics, perViewErrors);
-
+/* Prints out the distortion parameters
     std::cout << "Reprojection error = " << error << "\nK =\n"
               << K << "\nk=\n"
               << k << std::endl;
-
+*/
 
     // Precompute lens correction interpolation
     cv::initUndistortRectifyMap(K, k, cv::Matx33f::eye(), K, frameSize, CV_32FC1,
@@ -156,8 +158,10 @@ cv::Mat Camera::getMapY() const{
 void Camera::transformPicture(){
     cv::Mat input = cv::imread("/home/matmat1000/Documents/ballTest.jpg");
     cv::Mat output;
-    cv::warpPerspective(input, output, mHomoMat, cv::Size(800,750)); // Use input size or desired output size
+    cv::warpPerspective(mPicture, output, mHomoMat, cv::Size(800,750)); // Use input size or desired output size
+    std::cout << "Picture warpped succesfully!" << std::endl;
     //cv::imwrite("/home/matmat1000/Documents/ballTestPerspective.jpg", output);
+    /*
     // Display the transformed image
     cv::namedWindow("Undist before perspectiveTrans", cv::WINDOW_NORMAL); // Make window resizable
     cv::resizeWindow("Undist before perspectiveTrans", 800, 750);       // Resize window to specific size
@@ -169,21 +173,22 @@ void Camera::transformPicture(){
     cv::resizeWindow("Undist after perspectiveTrans", 800, 750);       // Resize window to specific size
     cv::imshow("Undist after perspectiveTrans", output);
     cv::waitKey(0); // Wait for a key press
+*/
 }
 
 void Camera::ballDetect(){
     //loads in image as grayscale
-    cv::Mat src = cv::imread("/home/matmat1000/Documents/ballTestPerspective.jpg", cv::IMREAD_GRAYSCALE);
-    cv::Mat src_Color = cv::imread("/home/matmat1000/Documents/ballTestPerspective.jpg", cv::IMREAD_COLOR);
+    cv::Mat src_grey;
+    cv::cvtColor(mPicture, src_grey, cv::COLOR_BGR2GRAY);
 
 
     //Apply a median filter to reduce noise, with a medium sized kernel  5
-    cv::medianBlur(src, src, 5);
+    cv::medianBlur(mPicture, mPicture, 5);
 
     //create a vec to store the circles, each circle is represented by 3 values: x,y,radius
     std::vector<cv::Vec3f> circles;
-    cv::HoughCircles(src, circles, cv::HOUGH_GRADIENT, 1,
-                 src.rows/16,  // change this value to detect circles with different distances to each other
+    cv::HoughCircles(src_grey, circles, cv::HOUGH_GRADIENT, 1,
+                 src_grey.rows/16,  // change this value to detect circles with different distances to each other
                  100, 30, 10, 30); // change the last two parameters (min radius and max radius)
 
 
@@ -193,21 +198,30 @@ void Camera::ballDetect(){
         cv::Vec3i c = circles[i]; //get the ith  circle (x,y,r)
         cv::Point2f center = cv::Point2f(c[0], c[1]); // circle center
         //draw the cicrle center as a small dot
-        cv::circle( src_Color, center, 1, cv::Scalar(0,100,100), 3, cv::LINE_AA); //draw a small circle in the center with colour (0,100,1)
+        cv::circle( mPicture, center, 1, cv::Scalar(0,100,100), 3, cv::LINE_AA); //draw a small circle in the center with colour (0,100,1)
         //draw the circle outline with the rr of the detected circle
         int radius = c[2];//get the radius of the ith circle
-        circle( src_Color, center, radius, cv::Scalar(255,0,255), 3, cv::LINE_AA); //draw the circles perimeter with colour (255,0,255)
+        circle( mPicture, center, radius, cv::Scalar(255,0,255), 3, cv::LINE_AA); //draw the circles perimeter with colour (255,0,255)
         //std::cout<< center.x << ", "<< center.y << std::endl;
         ballPoints.emplace_back(cv::Point2f(c[0], c[1]));
     }
-    imshow("detected circles", src_Color);
+/*
+    imshow("detected circles", mPicture);
     cv::waitKey();
+*/
+    if (ballPoints.size() > 0){
+        std::cout << "Balls detected" << std::endl; }
+    else{
+        std::cout << "No balls detected" << std::endl; }
+
 }
 
 cv::Point2f Camera::nextPoint()
 {
-    if (ballPoints.empty())
+    if (ballPoints.empty()) {
+        std::cerr << "Error: No more points available in ballPoints" << std::endl;
         return cv::Point2f(-500.0, -500.0);
+    }
 
     cv::Point2f Temp = ballPoints[ballPoints.size()-1];
     ballPoints.pop_back();
@@ -225,7 +239,7 @@ void Camera::detectGreen()
     int hmin = 54, smin = 223, vmin = 90;
     int hmax = 83, smax = 255, vmax = 255;
     //Convertion to HSV-colourspace from RGB-colourspace:
-    cv::cvtColor(input, imgHSV, cv::COLOR_BGR2HSV);
+    cv::cvtColor(mPicture, imgHSV, cv::COLOR_BGR2HSV);
 
     //Sets the HSV colour values:
     cv::Scalar lower(hmin, smin, vmin);
@@ -247,7 +261,7 @@ void Camera::detectRed()
     int hmin = 0, smin = 152, vmin = 141;
     int hmax = 20, smax = 255, vmax = 222;
     //Convertion to HSV-colourspace from RGB-colourspace:
-    cv::cvtColor(input, imgHSV, cv::COLOR_BGR2HSV);
+    cv::cvtColor(mPicture, imgHSV, cv::COLOR_BGR2HSV);
 
     //Sets the HSV colour values:
     cv::Scalar lower(hmin, smin, vmin);
@@ -610,14 +624,16 @@ void Camera::capturePicture()
             cv::remap(img, undistortedImage, getMapX(), getMapY(), cv::INTER_LINEAR);
 
             std::cout << "Image captured successfully!" << std::endl;
-            // Optional: Save the image to disk for verification
+            //Save the image to disk for verification
             cv::imwrite("/home/matmat1000/Documents/ballTestNew.jpg", undistortedImage);
+            mPicture = undistortedImage.clone();
             // Create an OpenCV display window
+        /*
             cv::namedWindow( "Captured Image unDist", cv::WINDOW_NORMAL); // other options: CV_AUTOSIZE, CV_FREERATIO
             cv::resizeWindow("Captured Image unDist", 900, 600); // Resize window to specific size
             cv::imshow("Captured Image unDist", undistortedImage);
             cv::waitKey(0);  // Wait for a key press
-
+        */
         }
         else
         {

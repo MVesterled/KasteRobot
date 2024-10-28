@@ -57,6 +57,7 @@ private:
     cv::Mat greenBallPicture;
     cv::Mat redBallPicture;
     cv::Mat blueBallPicture;
+    cv::Mat mPicture;
 };
 
 #endif // CAMERA_H

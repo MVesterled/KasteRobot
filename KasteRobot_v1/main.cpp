@@ -46,27 +46,44 @@ void mulMat(float mat1[4][4], float mat2[4][1], float result[4][1], int R1, int 
     }
 }
 
-std::vector<double> getCircleTarget(const std::vector<double> &pose, double timestep, double radius=0.075, double freq=1.0)
-{
-    std::vector<double> circ_target = pose;
-    circ_target[0] = pose[0] + radius * cos((2 * M_PI * freq * timestep));
-    circ_target[1] = pose[1] + radius * sin((2 * M_PI * freq * timestep));
-    return circ_target;
-}
-
 int main(int argc, char* argv[])
 {
-    Trajectory test;
-    std::vector<float> punkt = test.corner2BaseTransformation({0.125, 0.075, -0.1});
-    punkt = test.rotateZ(M_PI/8, punkt);
+
+
+
+
+    //Calibration of camera test that also prints transformation matrix
+    Camera visionCam;
+    //Calibrates camera
+    visionCam.calibrateCamera();
+    //Captures a picture and saves it
+        //visionCam.capturePicture();
+    //Warps the taken image before locating object for more precision
+    visionCam.transformPicture();
+    //Finds center of balls in picture
+    visionCam.ballDetect();
+    //Gets next point if any. If no balls left then -500, -500 is returned
+    cv::Point2f ballPoint = visionCam.nextPoint();
+    std::cout << "Ball 1 is located at: " << ballPoint.x << ", " << ballPoint.y << std::endl;
+    cv::Point2f ballPoint2 = visionCam.nextPoint();
+    std::cout << "Ball 2 is located at: " << ballPoint2.x << ", " << ballPoint2.y << std::endl;
+    cv::Point2f ballPoint3 = visionCam.nextPoint();
+    std::cout << "Ball 3 is located at: " << ballPoint3.x << ", " << ballPoint3.y << std::endl << std::endl;
+
+
+
+    //Udregning til kørselsmønster / kast for robot
+    Trajectory linaryThrow;
+    std::vector<float> punkt = linaryThrow.corner2BaseTransformation({0.125, 0.075, -0.1});
+    punkt = linaryThrow.rotateZ(M_PI/8, punkt);
     std::cout << punkt[1] << " ," << -punkt[0] << " , " << punkt[2] << std::endl;
 
-    std::vector<float> trac = test.getTrajectory({0.1, 0.1, 0.1});
+    std::vector<float> trac = linaryThrow.getTrajectory({0.1, 0.1, 0.1});
     float from[4][1] = {{trac[0]*1000}, {trac[1]*1000}, {trac[2]*1000}, {1}};
     float to[4][1] = {{trac[3]*1000}, {trac[4]*1000}, {trac[5]*1000}, {1}};
 
     //Transformation (Fætter og Spade)
-    //multiplication test
+    //multiplication
     float invTransformation[4][4] = {
         {0.0057, -1.0, 0.0013, 436.6030},
         {-0.9999, -0.0057, 0.0102, 496.1043},
@@ -88,33 +105,11 @@ int main(int argc, char* argv[])
     }
 
 
-    //Calibration of camera test that also prints transformation matrix
-    Camera visionCam;
-    visionCam.calibrateCamera();
-    cv::Point2f pixelPoint(593, 519); //creates point to convert fra camera to table (Red ball)
-    cv::Point2f TablePoint(0, 0);     //creates point to store real world coordinate
-    TablePoint = visionCam.TransformPoint(pixelPoint);
 
-    std::cout << "Homography matrix: " << visionCam.getHomoMat() << std::endl;
 
-    std::cout << "The transformed real world coordinates for the red ball are: ("
-              << TablePoint.x << ", "
-              << TablePoint.y << ")" << std::endl;
 
- /*
-    std::cout << "Program started" << std::endl << std::endl << std::endl;
-    visionCam.ballDetect();
 
-    cv::Point2f ballPoint = visionCam.nextPoint();
-    std::cout << "Ball 1 is located at: " << ballPoint.x << ", " << ballPoint.y << std::endl;
-    cv::Point2f ballPoint2 = visionCam.nextPoint();
-    std::cout << "Ball 2 is located at: " << ballPoint2.x << ", " << ballPoint2.y << std::endl;
-    cv::Point2f ballPoint3 = visionCam.nextPoint();
-    std::cout << "Ball 3 is located at: " << ballPoint3.x << ", " << ballPoint3.y << std::endl;
- */
-    //visionCam.capturePicture()
-
-/*
+/*  //Gripper connect
     QCoreApplication app(argc, argv); // Initialize Qt application
     Gripper gripper; // Create an instance of Gripper
     gripper.connectToServer("192.168.1.20", 1000); // Attempt to connect to the server
@@ -126,8 +121,8 @@ int main(int argc, char* argv[])
     }
 
 */
-
-    // Setup parameters
+/*
+    // Robot connection and Setup parameters
     std::string robot_ip = "192.168.1.54";
     double rtde_frequency = 500.0; // Hz
     double dt = 1.0 / rtde_frequency; // 2ms
@@ -144,14 +139,8 @@ int main(int argc, char* argv[])
     // Set application realtime priority
     RTDEUtility::setRealtimePriority(80);
 
-
     std::cout << "is connected: " << rtde_receive.isConnected() << std::endl;
 
-    double time_counter = 0.0;
-
-    // Move to init position using moveL
-    std::vector<double> actual_tcp_pose = rtde_receive.getActualTCPPose();
-    std::vector<double> init_pose = getCircleTarget(actual_tcp_pose, time_counter);
     //rtde_control.moveJ({0, -M_PI/2, -M_PI/4, -M_PI/2, 0, 0}, 0.1, 0.1);
     //rtde_control.moveL(init_pose, 0.2, 0.2);
 
@@ -162,19 +151,12 @@ int main(int argc, char* argv[])
     }
     target[0] += 0.10;
     //rtde_control.moveL(target, 0.1, 0.1, true);
+*/
 /*
     while (true){
             rtde_control.moveL({0.076, -0.5,  0.423, 0.495, -3.09, 0.043},  0.1, 0.1);
             rtde_control.moveL({0.076, -0.5,  0.323, 0.495, -3.09, 0.043},  0.1, 0.1);
         }
-*/
-    /*
-    while (true)
-    rtde_control.moveL({0.076, -0.5,  0.423, 0.495, -3.09, 0.043},  0.1, 0.1);
-    std::vector<double> joint_positions = rtde_receive.getActualQ();
-    std::cout << "Shoulder: " << joint_positions[1] * (180.0/3.141592653589793238463) << std::endl;
-    rtde_control.moveL({0.13, -0.525, 0.011, 0.37, 3.11, 0.123}, 0.1, 0.1);
-    }
 */
 
 }
