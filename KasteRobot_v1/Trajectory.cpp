@@ -5,6 +5,7 @@ Trajectory::Trajectory(){
 	mTopPunkt = std::make_pair(0.4, 0.4);
 	mOffset = 0.3;
 	mThrowBuildUp = 0.15;
+	mL = 0.1;
 }
 
 Trajectory::Trajectory(std::pair<float, float> startPunkt, std::pair<float, float> topPunkt, float offset, float throwBuildUp){
@@ -12,6 +13,7 @@ Trajectory::Trajectory(std::pair<float, float> startPunkt, std::pair<float, floa
 	mTopPunkt = topPunkt;
 	mOffset = offset;
 	mThrowBuildUp = throwBuildUp;
+	mL = 0.1;
 }
 
 float Trajectory::findAngle(std::vector<float> punkt){
@@ -76,16 +78,16 @@ std::vector<float> Trajectory::parabel3punkter(std::pair<float, float> punkt1, s
 	float z2 = punkt2.second;
 	float z3 = punkt3.second;
 
-	float nævner = (x1 - x2) * (x1 - x3) * (x2 - x3);
+	float naevner = (x1 - x2) * (x1 - x3) * (x2 - x3);
 
-	float a = (x3 * (z2 - z1) + x2 * (z1 - z3) + x1 * (z3 - z2)) / nævner;
-	float b = (x3 * x3 * (z1 - z2) + x2 * x2 * (z3 - z1) + x1 * x1 * (z2 - z3)) / nævner;
-	float c = (x2 * x3 * (x2 - x3) * z1 + x3 * x1 * (x3 - x1) * z2 + x1 * x2 * (x1 - x2) * z3) / nævner;
+	float a = (x3 * (z2 - z1) + x2 * (z1 - z3) + x1 * (z3 - z2)) / naevner;
+	float b = (x3 * x3 * (z1 - z2) + x2 * x2 * (z3 - z1) + x1 * x1 * (z2 - z3)) / naevner;
+	float c = (x2 * x3 * (x2 - x3) * z1 + x3 * x1 * (x3 - x1) * z2 + x1 * x2 * (x1 - x2) * z3) / naevner;
 
 	return{ a,b,c };
 }
 
-std::vector<float> Trajectory::getTrajectory(std::vector<float> target) {
+std::vector<float> Trajectory::getMoveLTrajectory(std::vector<float> target) {
 
 	//transformere fra cornerframe til robotbaseframe
 	target = corner2BaseTransformation(target);	
@@ -149,4 +151,37 @@ std::vector<float> Trajectory::getTrajectory(std::vector<float> target) {
 	//output
 	std::cout << "All coordinates are in corner frame. The throw should start in ( " << throwStart[0] << " , " << throwStart[1] << " , " << throwStart[2] << " ) and end in ( " << throwEnd[0] << " , " << throwEnd[1] << " , " << throwEnd[2] << " ), with a velocity of " << velocity << " m / s. the ball should be released in ( " << throwRelease[0] << " , " << throwRelease[1] << " , " << throwRelease[2] << " ) or " << timeToRelease << " s after the throw has started." << std::endl;
 	return { throwStart[0], throwStart[1], throwStart[2], throwEnd[0], throwEnd[1], throwEnd[2], throwRelease[0], throwRelease[1], throwRelease[2], velocity, timeToRelease };
+}
+
+float Trajectory::getVelocity(float targetHeight, float targetDistance, float startHeight) {
+	float g = 9.8;
+	float x = targetDistance;
+	float z = targetHeight;
+
+	float velocity = std::sqrt((-g * x * x) / (2 * z - 2 * startHeight));
+
+	return velocity;
+}
+
+std::vector<float> Trajectory::getSpeedJTrajectory(std::vector<float> target, float startHeight) {
+	float pi = 3.14159;
+
+	//transformere fra cornerframe til robotbaseframe
+	target = corner2BaseTransformation(target);
+	float x = target[0];
+	float y = target[1];
+	float z = target[2];
+
+	//udregner base vinkel og velocity
+	float hyp = std::sqrt(x * x + y * y);
+	float B_angle = std::acos(mL / hyp);
+	float throwDistance = std::sqrt(x*x+y*y-mL*mL);
+	float velocity = getVelocity(z, throwDistance, startHeight);
+
+	float v_angle = std::atan2(y,x) + pi/2;
+	float baseAngle = pi - B_angle - v_angle;
+
+	//output
+	std::cout << "the base should be rotated " << baseAngle << " radians and the throw should have a start velocity of " << velocity << " m/s" << std::endl;
+	return {};
 }
