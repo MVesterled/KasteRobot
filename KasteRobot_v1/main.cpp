@@ -1,6 +1,7 @@
 #include <opencv2/core/core.hpp>
 #include <opencv2/highgui/highgui.hpp>
 #include <pylon/PylonIncludes.h>
+#include <cmath>
 
 // standard libraries
 #include <iostream>
@@ -21,11 +22,13 @@
 //Own classes
 #include "Camera.h"
 #include "Gripper.h"
+#include "Trajectory.h"
 
 using namespace ur_rtde;
+using namespace std::chrono;
 
 //Function for multiplying matrices - temp location
-void mulMat(double mat1[4][4], double mat2[4][1], double result[4][1], int R1, int C1, int R2, int C2) {
+void mulMat(float mat1[4][4], float mat2[4][1], float result[4][1], int R1, int C1, int R2, int C2) {
     // Check if matrix dimensions are compatible for multiplication
     if (C1 != R2) {
         std::cout << "Matrix multiplication not possible. Incompatible dimensions." << std::endl;
@@ -43,8 +46,46 @@ void mulMat(double mat1[4][4], double mat2[4][1], double result[4][1], int R1, i
     }
 }
 
+std::vector<double> getCircleTarget(const std::vector<double> &pose, double timestep, double radius=0.075, double freq=1.0)
+{
+    std::vector<double> circ_target = pose;
+    circ_target[0] = pose[0] + radius * cos((2 * M_PI * freq * timestep));
+    circ_target[1] = pose[1] + radius * sin((2 * M_PI * freq * timestep));
+    return circ_target;
+}
+
 int main(int argc, char* argv[])
 {
+    Trajectory test;
+    std::vector<float> punkt = test.corner2BaseTransformation({0.125, 0.075, -0.1});
+    punkt = test.rotateZ(M_PI/8, punkt);
+    std::cout << punkt[1] << " ," << -punkt[0] << " , " << punkt[2] << std::endl;
+
+    std::vector<float> trac = test.getTrajectory({0.1, 0.1, 0.1});
+    float from[4][1] = {{trac[0]*1000}, {trac[1]*1000}, {trac[2]*1000}, {1}};
+    float to[4][1] = {{trac[3]*1000}, {trac[4]*1000}, {trac[5]*1000}, {1}};
+
+    //Transformation (Fætter og Spade)
+    //multiplication test
+    float invTransformation[4][4] = {
+        {0.0057, -1.0, 0.0013, 436.6030},
+        {-0.9999, -0.0057, 0.0102, 496.1043},
+        {-0.0102, -0.0014, -0.9999, -603.7265},
+        {0, 0, 0, 1}
+    };
+    float fromBase[4][1] = {0};
+    float toBase[4][1] = {0};
+    // Call the multiplication function
+    std::cout << std::endl;
+    mulMat(invTransformation, from, fromBase, 4, 4, 4, 1);
+    mulMat(invTransformation, to, toBase, 4, 4, 4, 1);
+    for (int i = 0; i < 4; i++) {
+        std::cout << fromBase[i][0] << ", ";
+    }
+    std::cout << std::endl;
+    for (int i = 0; i < 4; i++) {
+        std::cout << toBase[i][0] << ", ";
+    }
 
 
     //Calibration of camera test that also prints transformation matrix
@@ -60,35 +101,18 @@ int main(int argc, char* argv[])
               << TablePoint.x << ", "
               << TablePoint.y << ")" << std::endl;
 
-    //visionCam.transformPicture();
+ /*
     std::cout << "Program started" << std::endl << std::endl << std::endl;
     visionCam.ballDetect();
+
     cv::Point2f ballPoint = visionCam.nextPoint();
     std::cout << "Ball 1 is located at: " << ballPoint.x << ", " << ballPoint.y << std::endl;
     cv::Point2f ballPoint2 = visionCam.nextPoint();
     std::cout << "Ball 2 is located at: " << ballPoint2.x << ", " << ballPoint2.y << std::endl;
     cv::Point2f ballPoint3 = visionCam.nextPoint();
     std::cout << "Ball 3 is located at: " << ballPoint3.x << ", " << ballPoint3.y << std::endl;
-
-    visionCam.detectGreen();
-
-  /*
-    std::cout << "test" << std::endl;
-    //multiplication test
-    double invTransformation[4][4] = {
-        {0.0057, -1.0, 0.0013, 436.6030},
-        {-0.9999, -0.0057, 0.0102, 496.1043},
-        {-0.0102, -0.0014, -0.9999, -603.7265},
-        {0, 0, 0, 1}
-    };
-    double point[4][1] = {{299}, {737}, {-151-186}, {1}};
-    double result[4][1] = {0};
-    // Call the multiplication function
-    mulMat(invTransformation, point, result, 4, 4, 4, 1);
-    for (int i = 0; i < 4; i++) {
-        std::cout << result[i][0] << std::endl;
-    }
-*/
+ */
+    //visionCam.capturePicture()
 
 /*
     QCoreApplication app(argc, argv); // Initialize Qt application
@@ -101,170 +125,56 @@ int main(int argc, char* argv[])
         return 1; // Exit if the connection was not successful
     }
 
-    if(gripper.Home()){
-        qDebug() << "Step 1 OK";
-        if(gripper.Command("MOVE(20)"))
-            qDebug() << "Step 2 OK";
-    }
-    else{
-        qDebug() << "FAIL";
-    }
-    // Test, sending back and forward
+*/
+
+    // Setup parameters
+    std::string robot_ip = "192.168.1.54";
+    double rtde_frequency = 500.0; // Hz
+    double dt = 1.0 / rtde_frequency; // 2ms
+    uint16_t flags = RTDEControlInterface::FLAG_VERBOSE | RTDEControlInterface::FLAG_UPLOAD_SCRIPT;
+    int ur_cap_port = 50002;
+
+    // ur_rtde realtime priorities
+    int rt_receive_priority = 90;
+    int rt_control_priority = 85;
+
+    RTDEControlInterface rtde_control(robot_ip, rtde_frequency, flags, ur_cap_port, rt_control_priority);
+    RTDEReceiveInterface rtde_receive(robot_ip, rtde_frequency, {}, true, false, rt_receive_priority);
+
+    // Set application realtime priority
+    RTDEUtility::setRealtimePriority(80);
 
 
-    QTextStream in(stdin); // Create a QTextStream to read from standard input
-    std::cout << "Connected to the server. Type your messages (type 'exit' to quit):" << std::endl;
-    while (true) {
-        QString input; // String to hold user input
-        in >> input; // Read input from the user
-        // Exit condition
-        if (input == "exit") {
-            std::cout << "Exiting..." << std::endl;
-            break; // Exit the loop if the user types 'exit'
-        }
-        // Send the data to the server
-        QByteArray dataToSend = input.toUtf8(); // Convert QString to QByteArray
-        gripper.sendData(dataToSend); // Send data
-    }
-    gripper.disconnectFromServer(); // Disconnect before exiting
-    return 0;
-    */
-
-
-    // Robot connection test that prints out live shoulder location
-
-    // Simple example using the RTDE Receive Interface to get the joint positions of the robot
-    // OBS TJEK IP
-
-
-    // Simple example using the RTDE IO Interface to set a standard digital output.
-    //RTDEControlInterface ControlInter("192.168.1.54");
-    //ControlInter.moveL({-0.18,0.26,-0.277,2.2,2.52,0.0},);
-
-    //RTDEControlInterface rtde_control("192.168.1.54", 500.0, RTDEControlInterface::FLAG_USE_EXT_UR_CAP);
-   // rtde_control.moveL({-0.18,0.26,-0.277,2.2,2.52,0.0}, 0.5, 0.2);
-
-    /*
-    RTDEReceiveInterface rtde_receive("192.168.1.54");
     std::cout << "is connected: " << rtde_receive.isConnected() << std::endl;
-    while(true) {
-        std::vector<double> joint_positions = rtde_receive.getActualQ();
-        //std::cout << "Base: " << joint_positions[0] * (180.0/3.141592653589793238463) << std::endl;
-        std::cout << "Shoulder: " << joint_positions[1] * (180.0/3.141592653589793238463) << std::endl;
-        //std::cout << "Elbow: " << joint_positions[2] * (180.0/3.141592653589793238463) << std::endl;
-        //std::cout << "Wrist 1: " << joint_positions[3] * (180.0/3.141592653589793238463) << std::endl;
-        //std::cout << "Wrist 2: " << joint_positions[4] * (180.0/3.141592653589793238463) << std::endl;
-        //std::cout << "Wrist 3: " << joint_positions[5] * (180.0/3.141592653589793238463) << std::endl;
+
+    double time_counter = 0.0;
+
+    // Move to init position using moveL
+    std::vector<double> actual_tcp_pose = rtde_receive.getActualTCPPose();
+    std::vector<double> init_pose = getCircleTarget(actual_tcp_pose, time_counter);
+    //rtde_control.moveJ({0, -M_PI/2, -M_PI/4, -M_PI/2, 0, 0}, 0.1, 0.1);
+    //rtde_control.moveL(init_pose, 0.2, 0.2);
+
+    std::vector<double> target = rtde_receive.getActualTCPPose();
+    std::cout << std::endl;
+    for (int i = 0; i < target.size();  ++i){
+        std::cout << target[i] <<  " ";
     }
-    */
-
-
-
-// ////////////////////////////////////////////////////////////////////////////////////////////////
+    target[0] += 0.10;
+    //rtde_control.moveL(target, 0.1, 0.1, true);
+/*
+    while (true){
+            rtde_control.moveL({0.076, -0.5,  0.423, 0.495, -3.09, 0.043},  0.1, 0.1);
+            rtde_control.moveL({0.076, -0.5,  0.323, 0.495, -3.09, 0.043},  0.1, 0.1);
+        }
+*/
     /*
-    //Camera capure 1 picture, can only be ran with camera connected
-
-    // Initialize Pylon runtime
-    Pylon::PylonAutoInitTerm autoInitTerm;
-
-    try
-    {
-        // Create an instant camera object with the camera device found first.
-        Pylon::CInstantCamera camera(Pylon::CTlFactory::GetInstance().CreateFirstDevice());
-
-        // Get a camera nodemap in order to access camera parameters.
-        GenApi::INodeMap& nodemap = camera.GetNodeMap();
-
-        // Open the camera before accessing any parameters.
-        camera.Open();
-
-        // Create a pylon ImageFormatConverter object.
-        Pylon::CImageFormatConverter formatConverter;
-        formatConverter.OutputPixelFormat = Pylon::PixelType_BGR8packed;
-
-        // Create a PylonImage that will hold the captured image.
-        Pylon::CPylonImage pylonImage;
-
-        // Set custom exposure (optional, you can remove this if not needed)
-        int myExposure = 30000;
-        GenApi::CEnumerationPtr exposureAuto(nodemap.GetNode("ExposureAuto"));
-        if (GenApi::IsWritable(exposureAuto))
-        {
-            exposureAuto->FromString("Off");
-        }
-
-        GenApi::CFloatPtr exposureTime = nodemap.GetNode("ExposureTime");
-        if (exposureTime.IsValid())
-        {
-            if (myExposure >= exposureTime->GetMin() && myExposure <= exposureTime->GetMax())
-            {
-                exposureTime->SetValue(myExposure);
-            }
-            else
-            {
-                exposureTime->SetValue(exposureTime->GetMin());
-            }
-        }
-
-        // Start grabbing a single image.
-        camera.StartGrabbing(1);
-
-        // This smart pointer will receive the grab result data.
-        Pylon::CGrabResultPtr ptrGrabResult;
-
-        // Wait for an image and then retrieve it.
-        camera.RetrieveResult(5000, ptrGrabResult, Pylon::TimeoutHandling_ThrowException);
-
-        // Check if the image was grabbed successfully.
-        if (ptrGrabResult->GrabSucceeded())
-        {
-            // Convert the grabbed buffer to a pylon image.
-            formatConverter.Convert(pylonImage, ptrGrabResult);
-
-            // Create an OpenCV image (cv::Mat) from the pylon image.
-            cv::Mat img = cv::Mat(ptrGrabResult->GetHeight(), ptrGrabResult->GetWidth(), CV_8UC3, (uint8_t*)pylonImage.GetBuffer());
-
-            // At this point, img contains the captured image as a cv::Mat object.
-            // You can now use this cv::Mat object for further processing.
-
-            // Undistort the image using the precomputed maps (optional if needed)
-            cv::Mat undistortedImage;
-            cv::remap(img, undistortedImage, visionCam.getMapX(), visionCam.getMapY(), cv::INTER_LINEAR);
-
-            // Example: Transform a pixel point to real-world coordinates
-            cv::Point2f pixelPointRed(592, 514);  // Red Ball
-            cv::Point2f pixelPointGreen(796, 639);  // Green Ball
-
-            cv::Point2f realWorldPointRed = visionCam.TransformPoint(pixelPointRed);
-            cv::Point2f realWorldPointGreen = visionCam.TransformPoint(pixelPointGreen);
-
-            std::cout << "Real-world coordinates red: (" << realWorldPointRed.x << ", " << realWorldPointRed.y << ")" << std::endl;
-            std::cout << "Real-world coordinates green: (" << realWorldPointGreen.x << ", " << realWorldPointGreen.y << ")" << std::endl;
-
-            std::cout << "Image captured successfully!" << std::endl;
-            // Optional: Save the image to disk for verification
-            cv::imwrite("/home/matmat1000/Documents/ballTest.jpg", undistortedImage);
-            // Create an OpenCV display window
-            cv::namedWindow( "Captured Image unDist", cv::WINDOW_NORMAL); // other options: CV_AUTOSIZE, CV_FREERATIO
-            cv::resizeWindow("Captured Image unDist", 900, 600); // Resize window to specific size
-            cv::imshow("Captured Image unDist", undistortedImage);
-            cv::waitKey(0);  // Wait for a key press
-
-        }
-        else
-        {
-            std::cerr << "Error: " << ptrGrabResult->GetErrorCode() << " " << ptrGrabResult->GetErrorDescription() << std::endl;
-        }
-
-        // Close the camera
-        camera.Close();
+    while (true)
+    rtde_control.moveL({0.076, -0.5,  0.423, 0.495, -3.09, 0.043},  0.1, 0.1);
+    std::vector<double> joint_positions = rtde_receive.getActualQ();
+    std::cout << "Shoulder: " << joint_positions[1] * (180.0/3.141592653589793238463) << std::endl;
+    rtde_control.moveL({0.13, -0.525, 0.011, 0.37, 3.11, 0.123}, 0.1, 0.1);
     }
-    catch (GenICam::GenericException &e)
-    {
-        // Error handling
-        std::cerr << "An exception occurred: " << e.GetDescription() << std::endl;
-        return 1;
-    }
-    */
+*/
 
 }

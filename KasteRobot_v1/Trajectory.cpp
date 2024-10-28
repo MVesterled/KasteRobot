@@ -50,6 +50,8 @@ std::vector<float> Trajectory::corner2BaseTransformation(std::vector<float> punk
 	output[1] = -x + 0.375;
 	output[2] = -z;
 
+    std::cout << output[0] << " ," << output[1] << " , " << output[2] << std::endl;
+
 	return output;
 }
 
@@ -95,7 +97,7 @@ std::vector<float> Trajectory::getTrajectory(std::vector<float> target) {
 
 	//roterer så vores target er på XZ planen og der kan arbejdes i 2D
 	float targetAngle = findAngle(target);
-	std::vector<float> target2D = rotateZ(-targetAngle, target);
+    std::vector<float> target2D = rotateZ(-targetAngle+M_PI/8, target);
 
     //tilføjer et offset, så robotten starter kastet 30 cm vaek fra sig og ikke lige over sig selv
 	target2D[0] -= mOffset;

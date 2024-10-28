@@ -7,6 +7,7 @@
 #include <opencv2/highgui.hpp>
 #include <opencv2/imgproc.hpp>
 #include <opencv2/opencv.hpp>
+#include <pylon/PylonIncludes.h>
 
 class Camera
 {
@@ -42,6 +43,9 @@ public:
 
     //Function to test camera live feed
     void liveFeed();
+
+    //Capeture one  picture
+    void capturePicture();
 
 private:
     cv::Mat mHomoMat;
