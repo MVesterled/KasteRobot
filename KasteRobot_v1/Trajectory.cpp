@@ -1,10 +1,11 @@
 #include "Trajectory.h"
 
 Trajectory::Trajectory(){
-	mStartPunkt = std::make_pair(0.0, 0.3);
-	mTopPunkt = std::make_pair(0.4, 0.4);
-	mOffset = 0.3;
-	mThrowBuildUp = 0.15;
+    mOffset = 0.35;
+    mStartPunkt = std::make_pair(0.0, 0.3);
+    mTopPunkt = std::make_pair(0.3-mOffset/2, 0.4);
+
+    mThrowBuildUp = 0.15;
 }
 
 Trajectory::Trajectory(std::pair<float, float> startPunkt, std::pair<float, float> topPunkt, float offset, float throwBuildUp){
@@ -39,37 +40,34 @@ std::vector<float> Trajectory::rotateZ(float angle, std::vector<float> punkt){
 }
 
 std::vector<float> Trajectory::corner2BaseTransformation(std::vector<float> punkt) {
-	float x = punkt[0];
-	float y = punkt[1];
-	float z = punkt[2];
-	
-	std::vector<float> output;
-	output.resize(3);
+    float x = punkt[0];
+    float y = punkt[1];
+    float z = punkt[2];
 
-	output[0] = -y + 0.925;
-	output[1] = -x + 0.375;
-	output[2] = -z;
+    std::vector<float> output;
+    output.resize(3);
 
-    std::cout << output[0] << " ," << output[1] << " , " << output[2] << std::endl;
+    output[0] = -0.923 * x - 0.3849 * y + 0.7031903;
+    output[1] = -0.3849 * x + 0.923 * y - 0.7098926;
+    output[2] = -z - 0.01068;
 
-	return output;
+    return output;
 }
 
 std::vector<float> Trajectory::base2CornerTransformation(std::vector<float> punkt) {
-	float x = punkt[0];
-	float y = punkt[1];
-	float z = punkt[2]; 
-	
-	std::vector<float> output;
-	output.resize(3);
+    float x = punkt[0];
+    float y = punkt[1];
+    float z = punkt[2];
 
-	output[0] = -y + 0.375;
-	output[1] = -x + 0.925;
-	output[2] = -z;
+    std::vector<float> output;
+    output.resize(3);
 
-	return output;
+    output[0] = -0.923 * x - 0.3849 * y + 0.3757709;
+    output[1] = -0.3849 * x + 0.923 * y + 0.9258619;
+    output[2] = -z - 0.01068;
+
+    return output;
 }
-
 std::vector<float> Trajectory::parabel3punkter(std::pair<float, float> punkt1, std::pair<float, float> punkt2, std::pair<float, float> punkt3){
 	float x1 = punkt1.first;
 	float x2 = punkt2.first;
@@ -97,7 +95,7 @@ std::vector<float> Trajectory::getTrajectory(std::vector<float> target) {
 
 	//roterer så vores target er på XZ planen og der kan arbejdes i 2D
 	float targetAngle = findAngle(target);
-    std::vector<float> target2D = rotateZ(-targetAngle+M_PI/8, target);
+    std::vector<float> target2D = rotateZ(-targetAngle, target);
 
     //tilføjer et offset, så robotten starter kastet 30 cm vaek fra sig og ikke lige over sig selv
 	target2D[0] -= mOffset;
@@ -142,13 +140,13 @@ std::vector<float> Trajectory::getTrajectory(std::vector<float> target) {
 	throwRelease = rotateZ(targetAngle, throwRelease);
 	throwEnd = rotateZ(targetAngle, throwEnd);
 	throwStart = rotateZ(targetAngle, throwStart);
-
+/*
 	//transformere fra robotbaseframe til cornerframe
 	throwRelease = base2CornerTransformation(throwRelease);
 	throwEnd = base2CornerTransformation(throwEnd);
 	throwStart = base2CornerTransformation(throwStart);
-
+*/
 	//output
-	std::cout << "All coordinates are in corner frame. The throw should start in ( " << throwStart[0] << " , " << throwStart[1] << " , " << throwStart[2] << " ) and end in ( " << throwEnd[0] << " , " << throwEnd[1] << " , " << throwEnd[2] << " ), with a velocity of " << velocity << " m / s. the ball should be released in ( " << throwRelease[0] << " , " << throwRelease[1] << " , " << throwRelease[2] << " ) or " << timeToRelease << " s after the throw has started." << std::endl;
+    std::cout << "All coordinates are in base frame. The throw should start in ( " << throwStart[0] << " , " << throwStart[1] << " , " << throwStart[2] << " ) and end in ( " << throwEnd[0] << " , " << throwEnd[1] << " , " << throwEnd[2] << " ), with a velocity of " << velocity << " m / s. the ball should be released in ( " << throwRelease[0] << " , " << throwRelease[1] << " , " << throwRelease[2] << " ) or " << timeToRelease << " s after the throw has started." << std::endl;
 	return { throwStart[0], throwStart[1], throwStart[2], throwEnd[0], throwEnd[1], throwEnd[2], throwRelease[0], throwRelease[1], throwRelease[2], velocity, timeToRelease };
 }

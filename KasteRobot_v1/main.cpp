@@ -46,6 +46,17 @@ void mulMat(float mat1[4][4], float mat2[4][1], float result[4][1], int R1, int 
     }
 }
 
+std::vector<double> cornerToFrame(double x, double y, double z){
+    std::vector<double> output = {0, 0, 0, 0, 0, 0};
+    output[0] = -0.923 * x - 0.3849 * y + 0.7031903;
+    output[1] = -0.3849 * x + 0.923 * y - 0.7098926;
+    output[2] = -z - 0.01068;
+    output[3] = 0.622;
+    output[4] = -3.065;
+    output[5] = 0.029;
+    return output;
+}
+
 int main(int argc, char* argv[])
 {
 
@@ -57,7 +68,7 @@ int main(int argc, char* argv[])
     //Calibrates camera
     visionCam.calibrateCamera();
     //Captures a picture and saves it
-        //visionCam.capturePicture();
+    visionCam.capturePicture();
     //Warps the taken image before locating object for more precision
     visionCam.transformPicture();
     //Finds center of balls in picture
@@ -74,54 +85,19 @@ int main(int argc, char* argv[])
 
     //Udregning til kørselsmønster / kast for robot
     Trajectory linaryThrow;
-    std::vector<float> punkt = linaryThrow.corner2BaseTransformation({0.125, 0.075, -0.1});
-    punkt = linaryThrow.rotateZ(M_PI/8, punkt);
-    std::cout << punkt[1] << " ," << -punkt[0] << " , " << punkt[2] << std::endl;
+    //Point where ball is
+    std::vector<float> target =  {600.0/1000.0, 200.0/1000.0, -0.1};
+    //Findes koordinates in base fram from robot
+    std::vector<float> koordinates = linaryThrow.getTrajectory(target);
+    //robot points
+    std::vector<double> from = {koordinates[0], koordinates[1], koordinates[2], 0.622, -3.065, 0.029};
+    std::vector<double> to = {koordinates[3], koordinates[4], koordinates[5], 0.622, -3.065, 0.029};
 
-    std::vector<float> trac = linaryThrow.getTrajectory({0.1, 0.1, 0.1});
-    float from[4][1] = {{trac[0]*1000}, {trac[1]*1000}, {trac[2]*1000}, {1}};
-    float to[4][1] = {{trac[3]*1000}, {trac[4]*1000}, {trac[5]*1000}, {1}};
-
-    //Transformation (Fætter og Spade)
-    //multiplication
-    float invTransformation[4][4] = {
-        {0.0057, -1.0, 0.0013, 436.6030},
-        {-0.9999, -0.0057, 0.0102, 496.1043},
-        {-0.0102, -0.0014, -0.9999, -603.7265},
-        {0, 0, 0, 1}
-    };
-    float fromBase[4][1] = {0};
-    float toBase[4][1] = {0};
-    // Call the multiplication function
-    std::cout << std::endl;
-    mulMat(invTransformation, from, fromBase, 4, 4, 4, 1);
-    mulMat(invTransformation, to, toBase, 4, 4, 4, 1);
-    for (int i = 0; i < 4; i++) {
-        std::cout << fromBase[i][0] << ", ";
-    }
-    std::cout << std::endl;
-    for (int i = 0; i < 4; i++) {
-        std::cout << toBase[i][0] << ", ";
-    }
+    //Udregning af bold pos
+    std::vector<double> pickUp = cornerToFrame(ballPoint.x/1000, ballPoint.y/1000, -0.20);
+    std::vector<double> pickUpDown = cornerToFrame(ballPoint.x/1000, ballPoint.y/1000, -0.16);
 
 
-
-
-
-
-/*  //Gripper connect
-    QCoreApplication app(argc, argv); // Initialize Qt application
-    Gripper gripper; // Create an instance of Gripper
-    gripper.connectToServer("192.168.1.20", 1000); // Attempt to connect to the server
-
-    // Check if the connection was successful
-    if (!gripper.isConnected()) {
-        std::cout << "Failed to connect to the server." << std::endl;
-        return 1; // Exit if the connection was not successful
-    }
-
-*/
-/*
     // Robot connection and Setup parameters
     std::string robot_ip = "192.168.1.54";
     double rtde_frequency = 500.0; // Hz
@@ -144,19 +120,63 @@ int main(int argc, char* argv[])
     //rtde_control.moveJ({0, -M_PI/2, -M_PI/4, -M_PI/2, 0, 0}, 0.1, 0.1);
     //rtde_control.moveL(init_pose, 0.2, 0.2);
 
-    std::vector<double> target = rtde_receive.getActualTCPPose();
+    //std::vector<double> target = rtde_receive.getActualTCPPose();
     std::cout << std::endl;
     for (int i = 0; i < target.size();  ++i){
         std::cout << target[i] <<  " ";
     }
     target[0] += 0.10;
     //rtde_control.moveL(target, 0.1, 0.1, true);
+    //Gripper connect
+    QCoreApplication app(argc, argv); // Initialize Qt application
+    Gripper gripper; // Create an instance of Gripper
+    gripper.connectToServer("192.168.1.20", 1000); // Attempt to connect to the server
+
+    // Check if the connection was successful
+    if (!gripper.isConnected()) {
+        std::cout << "Failed to connect to the server." << std::endl;
+        return 1; // Exit if the connection was not successful
+    }
+
+    int z = 0;
+    while (z < 1){
+        /*
+            gripper.Home();
+            rtde_control.moveL(pickUp,  0.05, 0.05); //Ball location
+            rtde_control.moveL(pickUpDown,  0.05, 0.05); //Ball location
+            gripper.Grip(5, 40);
+            rtde_control.moveL(pickUp,  0.05, 0.05); //Ball location
+            rtde_control.moveL(from,  0.5, 0.2);   //Throw from pos.
+            rtde_control.moveL(to,  1, 1);     //Throw to pos.
+            gripper.Home();
+            z++;
+
 */
-/*
-    while (true){
-            rtde_control.moveL({0.076, -0.5,  0.423, 0.495, -3.09, 0.043},  0.1, 0.1);
-            rtde_control.moveL({0.076, -0.5,  0.323, 0.495, -3.09, 0.043},  0.1, 0.1);
+
+        gripper.Home();
+        rtde_control.moveL(pickUp, 0.2, 0.2);
+        rtde_control.moveL(pickUpDown, 0.2, 0.2);
+        gripper.Grip(5, 40);
+        rtde_control.moveL(pickUp, 0.2, 0.2);
+        rtde_control.moveL(from, 0.3, 0.3);
+
+        // Start moving to the "to" position
+        std::thread releaseThread([&]() {
+            std::this_thread::sleep_for(std::chrono::milliseconds(100)); // Adjust delay to release mid-way
+            gripper.Home();  // Trigger gripper release
+        });
+
+        // Begin motion to "to" position, allowing release to occur mid-motion
+        rtde_control.moveL(to, 2.5, 4);
+
+        // Wait for the release thread to complete
+        releaseThread.join();
+        z++;
+
         }
-*/
+
+
+
+
 
 }

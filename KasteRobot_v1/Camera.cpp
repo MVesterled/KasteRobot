@@ -158,7 +158,7 @@ cv::Mat Camera::getMapY() const{
 void Camera::transformPicture(){
     cv::Mat input = cv::imread("/home/matmat1000/Documents/ballTest.jpg");
     cv::Mat output;
-    cv::warpPerspective(mPicture, output, mHomoMat, cv::Size(800,750)); // Use input size or desired output size
+    cv::warpPerspective(mPicture, mPicture, mHomoMat, cv::Size(800,750)); // Use input size or desired output size
     std::cout << "Picture warpped succesfully!" << std::endl;
     //cv::imwrite("/home/matmat1000/Documents/ballTestPerspective.jpg", output);
     /*
@@ -220,7 +220,7 @@ cv::Point2f Camera::nextPoint()
 {
     if (ballPoints.empty()) {
         std::cerr << "Error: No more points available in ballPoints" << std::endl;
-        return cv::Point2f(-500.0, -500.0);
+        return cv::Point2f(250, 250);
     }
 
     cv::Point2f Temp = ballPoints[ballPoints.size()-1];
@@ -628,12 +628,12 @@ void Camera::capturePicture()
             cv::imwrite("/home/matmat1000/Documents/ballTestNew.jpg", undistortedImage);
             mPicture = undistortedImage.clone();
             // Create an OpenCV display window
-        /*
+/*
             cv::namedWindow( "Captured Image unDist", cv::WINDOW_NORMAL); // other options: CV_AUTOSIZE, CV_FREERATIO
             cv::resizeWindow("Captured Image unDist", 900, 600); // Resize window to specific size
             cv::imshow("Captured Image unDist", undistortedImage);
             cv::waitKey(0);  // Wait for a key press
-        */
+*/
         }
         else
         {
