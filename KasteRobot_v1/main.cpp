@@ -51,7 +51,7 @@ std::vector<double> cornerToFrame(double x, double y, double z){
     output[0] = -0.923 * x - 0.3849 * y + 0.7031903;
     output[1] = -0.3849 * x + 0.923 * y - 0.7098926;
     output[2] = -z - 0.01068;
-    output[3] = 0.622;
+    output[3] = 0.432;
     output[4] = -3.065;
     output[5] = 0.029;
     return output;
@@ -72,6 +72,7 @@ int main(int argc, char* argv[])
     //Warps the taken image before locating object for more precision
     visionCam.transformPicture();
     //Finds center of balls in picture
+    visionCam.detectGreen();
     visionCam.ballDetect();
     //Gets next point if any. If no balls left then -500, -500 is returned
     cv::Point2f ballPoint = visionCam.nextPoint();
@@ -95,7 +96,7 @@ int main(int argc, char* argv[])
 
     //Udregning af bold pos
     std::vector<double> pickUp = cornerToFrame(ballPoint.x/1000, ballPoint.y/1000, -0.20);
-    std::vector<double> pickUpDown = cornerToFrame(ballPoint.x/1000, ballPoint.y/1000, -0.16);
+    std::vector<double> pickUpDown = cornerToFrame(ballPoint.x/1000, ballPoint.y/1000, -0.155);
 
 
     // Robot connection and Setup parameters
@@ -125,7 +126,7 @@ int main(int argc, char* argv[])
     for (int i = 0; i < target.size();  ++i){
         std::cout << target[i] <<  " ";
     }
-    target[0] += 0.10;
+    //target[0] += 0.10;
     //rtde_control.moveL(target, 0.1, 0.1, true);
     //Gripper connect
     QCoreApplication app(argc, argv); // Initialize Qt application
@@ -140,40 +141,29 @@ int main(int argc, char* argv[])
 
     int z = 0;
     while (z < 1){
-        /*
-            gripper.Home();
-            rtde_control.moveL(pickUp,  0.05, 0.05); //Ball location
-            rtde_control.moveL(pickUpDown,  0.05, 0.05); //Ball location
-            gripper.Grip(5, 40);
-            rtde_control.moveL(pickUp,  0.05, 0.05); //Ball location
-            rtde_control.moveL(from,  0.5, 0.2);   //Throw from pos.
-            rtde_control.moveL(to,  1, 1);     //Throw to pos.
-            gripper.Home();
-            z++;
-
-*/
 
         gripper.Home();
         rtde_control.moveL(pickUp, 0.2, 0.2);
         rtde_control.moveL(pickUpDown, 0.2, 0.2);
-        gripper.Grip(5, 40);
+        gripper.Grip(5, 36);
         rtde_control.moveL(pickUp, 0.2, 0.2);
         rtde_control.moveL(from, 0.3, 0.3);
 
         // Start moving to the "to" position
         std::thread releaseThread([&]() {
-            std::this_thread::sleep_for(std::chrono::milliseconds(100)); // Adjust delay to release mid-way
-            gripper.Home();  // Trigger gripper release
+            std::this_thread::sleep_for(std::chrono::milliseconds(185)); // Adjust delay to release mid-way
+            gripper.Command("RELEASE(2, 420)");  // Trigger gripper release
         });
 
         // Begin motion to "to" position, allowing release to occur mid-motion
-        rtde_control.moveL(to, 2.5, 4);
+        rtde_control.moveL(to, 3, 40);
 
         // Wait for the release thread to complete
         releaseThread.join();
         z++;
 
         }
+
 
 
 

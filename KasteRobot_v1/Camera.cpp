@@ -167,30 +167,34 @@ void Camera::transformPicture(){
     cv::resizeWindow("Undist before perspectiveTrans", 800, 750);       // Resize window to specific size
     cv::imshow("Undist before perspectiveTrans", input);
     cv::waitKey(0); // Wait for a key press
-
-    // Display the transformed image
+*/
+    //Display the transformed image
     cv::namedWindow("Undist after perspectiveTrans", cv::WINDOW_NORMAL); // Make window resizable
     cv::resizeWindow("Undist after perspectiveTrans", 800, 750);       // Resize window to specific size
-    cv::imshow("Undist after perspectiveTrans", output);
+    cv::imshow("Undist after perspectiveTrans", mPicture);
     cv::waitKey(0); // Wait for a key press
-*/
+
 }
 
 void Camera::ballDetect(){
     //loads in image as grayscale
-    cv::Mat src_grey;
-    cv::cvtColor(mPicture, src_grey, cv::COLOR_BGR2GRAY);
+    cv::Mat src_grey = 255*greenBallPicture;
+    //cv::cvtColor(greenBallPicture, src_grey, cv::COLOR_BGR2GRAY);
 
+    imshow("255*", src_grey);
+    cv::waitKey();
 
     //Apply a median filter to reduce noise, with a medium sized kernel  5
-    cv::medianBlur(mPicture, mPicture, 5);
+    cv::medianBlur(src_grey, src_grey, 5);
+
+    cv::Mat edges;
+    cv::Canny(src_grey, src_grey, 50, 150);
 
     //create a vec to store the circles, each circle is represented by 3 values: x,y,radius
     std::vector<cv::Vec3f> circles;
     cv::HoughCircles(src_grey, circles, cv::HOUGH_GRADIENT, 1,
-                 src_grey.rows/16,  // change this value to detect circles with different distances to each other
-                 100, 30, 10, 30); // change the last two parameters (min radius and max radius)
-
+                 src_grey.rows/8,  // change this value to detect circles with different distances to each other
+                 50, 15, 10, 30); // change the last two parameters (min radius and max radius)
 
     //vizulice  circles
     for( size_t i = 0; i < circles.size(); i++ ) //loop through the detected circles and draw them on the original image
@@ -205,10 +209,10 @@ void Camera::ballDetect(){
         //std::cout<< center.x << ", "<< center.y << std::endl;
         ballPoints.emplace_back(cv::Point2f(c[0], c[1]));
     }
-/*
+
     imshow("detected circles", mPicture);
     cv::waitKey();
-*/
+
     if (ballPoints.size() > 0){
         std::cout << "Balls detected" << std::endl; }
     else{

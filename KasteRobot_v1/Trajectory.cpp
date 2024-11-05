@@ -3,9 +3,9 @@
 Trajectory::Trajectory(){
     mOffset = 0.35;
     mStartPunkt = std::make_pair(0.0, 0.3);
-    mTopPunkt = std::make_pair(0.3-mOffset/2, 0.4);
+    mTopPunkt = std::make_pair(0.3-mOffset/2, 0.3);
 
-    mThrowBuildUp = 0.15;
+    mThrowBuildUp = 0.2;
 }
 
 Trajectory::Trajectory(std::pair<float, float> startPunkt, std::pair<float, float> topPunkt, float offset, float throwBuildUp){
@@ -130,11 +130,11 @@ std::vector<float> Trajectory::getTrajectory(std::vector<float> target) {
 
 	throwEnd[0] = throwRelease[0] + (std::cos(throwAngle) * mThrowBuildUp);
 	throwEnd[1] = 0;
-	throwEnd[2] = throwRelease[2] + (std::sin(throwAngle) * mThrowBuildUp);
+    throwEnd[2] = throwRelease[2] + (std::sin(throwAngle) * mThrowBuildUp) + 0.175;
 
 	throwStart[0] = throwRelease[0] - (std::cos(throwAngle) * mThrowBuildUp);
 	throwStart[1] = 0;
-	throwStart[2] = throwRelease[2] - (std::sin(throwAngle) * mThrowBuildUp);
+    throwStart[2] = throwRelease[2] - (std::sin(throwAngle) * mThrowBuildUp) + 0.175;
 
 	//rotere tilbage så vi igen har Y dimensionen med
 	throwRelease = rotateZ(targetAngle, throwRelease);
@@ -148,5 +148,6 @@ std::vector<float> Trajectory::getTrajectory(std::vector<float> target) {
 */
 	//output
     std::cout << "All coordinates are in base frame. The throw should start in ( " << throwStart[0] << " , " << throwStart[1] << " , " << throwStart[2] << " ) and end in ( " << throwEnd[0] << " , " << throwEnd[1] << " , " << throwEnd[2] << " ), with a velocity of " << velocity << " m / s. the ball should be released in ( " << throwRelease[0] << " , " << throwRelease[1] << " , " << throwRelease[2] << " ) or " << timeToRelease << " s after the throw has started." << std::endl;
-	return { throwStart[0], throwStart[1], throwStart[2], throwEnd[0], throwEnd[1], throwEnd[2], throwRelease[0], throwRelease[1], throwRelease[2], velocity, timeToRelease };
+    std::cout << "the angle the gripper should be is" << targetAngle << std::endl;
+    return { throwStart[0], throwStart[1], throwStart[2], throwEnd[0], throwEnd[1], throwEnd[2], throwRelease[0], throwRelease[1], throwRelease[2], velocity, timeToRelease, targetAngle };
 }
