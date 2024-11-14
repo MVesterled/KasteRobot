@@ -41,6 +41,8 @@ public:
     void detectBlue();
     void colourDetection();
 
+    void centerOfMass();
+
     //Function to test camera live feed
     void liveFeed();
 

@@ -106,10 +106,10 @@ void Camera::calibrateCamera(){
 
     //Real world transformation of coordiantes
     // Image points (corresponding to real-world points)
-    mImagePoints.push_back(cv::Point2f(417, 385)); // (0, 0) real world top left
-    mImagePoints.push_back(cv::Point2f(1043, 409)); // (800, 0) real world top right
-    mImagePoints.push_back(cv::Point2f(421, 1041)); // (0, 750) real world bottom left
-    mImagePoints.push_back(cv::Point2f(1047, 972)); // (800, 750) real world bottom right
+    mImagePoints.push_back(cv::Point2f(412, 380)); // (0, 0) real world top left
+    mImagePoints.push_back(cv::Point2f(1042, 405)); // (800, 0) real world top right
+    mImagePoints.push_back(cv::Point2f(415, 1041)); // (0, 750) real world bottom left
+    mImagePoints.push_back(cv::Point2f(1046, 969)); // (800, 750) real world bottom right
 
     // Real world points
     mRealWorldPoints.push_back(cv::Point2f(0.0f, 0.0f));     // (0, 0) real world top left
@@ -169,10 +169,10 @@ void Camera::transformPicture(){
     cv::waitKey(0); // Wait for a key press
 */
     //Display the transformed image
-    cv::namedWindow("Undist after perspectiveTrans", cv::WINDOW_NORMAL); // Make window resizable
-    cv::resizeWindow("Undist after perspectiveTrans", 800, 750);       // Resize window to specific size
-    cv::imshow("Undist after perspectiveTrans", mPicture);
-    cv::waitKey(0); // Wait for a key press
+    //cv::namedWindow("Undist after perspectiveTrans", cv::WINDOW_NORMAL); // Make window resizable
+    //cv::resizeWindow("Undist after perspectiveTrans", 800, 750);       // Resize window to specific size
+    //cv::imshow("Undist after perspectiveTrans", mPicture);
+    //cv::waitKey(0); // Wait for a key press
 
 }
 
@@ -181,8 +181,8 @@ void Camera::ballDetect(){
     cv::Mat src_grey = 255*greenBallPicture;
     //cv::cvtColor(greenBallPicture, src_grey, cv::COLOR_BGR2GRAY);
 
-    imshow("255*", src_grey);
-    cv::waitKey();
+    //imshow("255*", src_grey);
+    //cv::waitKey();
 
     //Apply a median filter to reduce noise, with a medium sized kernel  5
     cv::medianBlur(src_grey, src_grey, 5);
@@ -210,8 +210,8 @@ void Camera::ballDetect(){
         ballPoints.emplace_back(cv::Point2f(c[0], c[1]));
     }
 
-    imshow("detected circles", mPicture);
-    cv::waitKey();
+    //imshow("detected circles", mPicture);
+    //cv::waitKey();
 
     if (ballPoints.size() > 0){
         std::cout << "Balls detected" << std::endl; }
@@ -252,8 +252,8 @@ void Camera::detectGreen()
     //Applying colourfilter to the image:
     cv::inRange(imgHSV, lower, upper, greenBallPicture);
     //Shows the colour mask:
-    cv::imshow("Image Green", greenBallPicture);
-    cv::waitKey(0);
+    //cv::imshow("Image Green", greenBallPicture);
+    //cv::waitKey(0);
 }
 
 void Camera::detectRed()
@@ -274,8 +274,8 @@ void Camera::detectRed()
     //Applying colourfilter to the image:
     cv::inRange(imgHSV, lower, upper, redBallPicture);
     //Shows the colour mask:
-    cv::imshow("Image Green", redBallPicture);
-    cv::waitKey(0);
+    //cv::imshow("Image Green", redBallPicture);
+    //cv::waitKey(0);
 }
 
 void Camera::colourDetection()
@@ -408,6 +408,36 @@ int main()
     return 0;
 }
         */
+}
+
+void Camera::centerOfMass(){
+    //loads in image as grayscale
+    cv::Mat src_grey = 255*greenBallPicture;
+    //cv::cvtColor(greenBallPicture, src_grey, cv::COLOR_BGR2GRAY);
+
+    imshow("255*", src_grey);
+    cv::waitKey();
+
+    cv::imwrite("/home/matmat1000/Documents/centerOfMass.jpg", src_grey);
+
+
+    // Calculate moments directly on the binary image
+    cv::Moments M = cv::moments(src_grey, true);
+
+    // Calculate the center using the moments
+    if (M.m00 != 0) {
+        int cx = static_cast<int>(M.m10 / M.m00);
+        int cy = static_cast<int>(M.m01 / M.m00);
+        std::cout << "Center of the circle: (" << cx << ", " << cy << ")" << std::endl;
+        // Draw the center point for visualization
+        cv::circle(mPicture, cv::Point(cx, cy), 5, cv::Scalar(255,255,0), 2, cv::LINE_AA);
+        cv::imshow("Center of Circle", mPicture);
+        cv::waitKey(0);
+    } else {
+        std::cerr << "No mass found in the image, cannot determine center." << std::endl;
+    }
+    cv::imwrite("/home/matmat1000/Documents/centerOfMassVSHough.jpg", mPicture);
+
 }
 
 void Camera::liveFeed()

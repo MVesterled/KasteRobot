@@ -60,9 +60,6 @@ std::vector<double> cornerToFrame(double x, double y, double z){
 int main(int argc, char* argv[])
 {
 
-
-
-
     //Calibration of camera test that also prints transformation matrix
     Camera visionCam;
     //Calibrates camera
@@ -74,6 +71,7 @@ int main(int argc, char* argv[])
     //Finds center of balls in picture
     visionCam.detectGreen();
     visionCam.ballDetect();
+    visionCam.centerOfMass();
     //Gets next point if any. If no balls left then -500, -500 is returned
     cv::Point2f ballPoint = visionCam.nextPoint();
     std::cout << "Ball 1 is located at: " << ballPoint.x << ", " << ballPoint.y << std::endl;
@@ -82,8 +80,7 @@ int main(int argc, char* argv[])
     cv::Point2f ballPoint3 = visionCam.nextPoint();
     std::cout << "Ball 3 is located at: " << ballPoint3.x << ", " << ballPoint3.y << std::endl << std::endl;
 
-
-
+    /*
     //Udregning til kørselsmønster / kast for robot
     Trajectory linaryThrow;
     //Point where ball is
@@ -163,7 +160,7 @@ int main(int argc, char* argv[])
         z++;
 
         }
-
+*/
 
 
 
