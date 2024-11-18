@@ -2,7 +2,7 @@
 
 Camera::Camera(){
     //Change this file to your own path
-    mPicture = cv::imread("/home/matmat1000/C++/SemProjekt/KasteRobot_v1/Img/ballTest.jpg");
+    mPicture = cv::imread("/home/matmat1000/C++/SemProjekt/KasteRobot/KasteRobot_v1/Img/ballTest.jpg");
     //cv::imshow("Default image", mPicture);
     //cv::waitKey(0);
 }
@@ -13,7 +13,7 @@ void Camera::calibrateCamera(){
     std::vector<cv::String> fileNames;
     //glob gets all files of a folder (false means no sub directories)
     //Change path to match your system
-    cv::glob("/home/matmat1000/C++/SemProjekt/KasteRobot_v1/Img/Calib/*.png", fileNames, false);
+    cv::glob("/home/matmat1000/C++/SemProjekt/KasteRobot/KasteRobot_v1/Img/Calib/*.png", fileNames, false);
     cv::Size patternSize(9, 6); //internal corners of calibrationplate
     // Declare a vector of vectors to store 2D points (found corners) for each image
     // The size of 'q' matches the number of files in 'fileNames', so each image will have a corresponding entry

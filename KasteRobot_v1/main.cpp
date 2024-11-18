@@ -51,9 +51,9 @@ std::vector<double> cornerToFrame(double x, double y, double z){
     output[0] = -0.923 * x - 0.3849 * y + 0.7031903;
     output[1] = -0.3849 * x + 0.923 * y - 0.7098926;
     output[2] = -z - 0.01068;
-    output[3] = 0.432;
-    output[4] = -3.065;
-    output[5] = 0.029;
+    output[3] = 0.634;
+    output[4] = -3.067;
+    output[5] = 0.026;
     return output;
 }
 
@@ -66,7 +66,7 @@ int main(int argc, char* argv[])
     //Calibrates camera
     visionCam.calibrateCamera();
     //Captures a picture and saves it
-    //visionCam.capturePicture();
+    visionCam.capturePicture();
     //Warps the taken image before locating object for more precision
     visionCam.transformPicture();
     //Finds center of balls in picture
@@ -80,13 +80,13 @@ int main(int argc, char* argv[])
     std::cout << "Ball 2 is located at: " << ballPoint2.x << ", " << ballPoint2.y << std::endl;
     cv::Point2f ballPoint3 = visionCam.nextPoint();
     std::cout << "Ball 3 is located at: " << ballPoint3.x << ", " << ballPoint3.y << std::endl << std::endl;
-    /*
+
     //Udregning til kørselsmønster / kast for robot
     Trajectory linaryThrow;
     //Point where ball is
     std::vector<float> target =  {600.0/1000.0, 200.0/1000.0, -0.1};
     //Findes koordinates in base fram from robot
-    std::vector<float> koordinates = linaryThrow.getTrajectory(target);
+    std::vector<float> koordinates = linaryThrow.getMoveLTrajectory(target);
     //robot points
     std::vector<double> from = {koordinates[0], koordinates[1], koordinates[2], 0.622, -3.065, 0.029};
     std::vector<double> to = {koordinates[3], koordinates[4], koordinates[5], 0.622, -3.065, 0.029};
@@ -123,8 +123,8 @@ int main(int argc, char* argv[])
     for (int i = 0; i < target.size();  ++i){
         std::cout << target[i] <<  " ";
     }
-    //target[0] += 0.10;
-    //rtde_control.moveL(target, 0.1, 0.1, true);
+
+
     //Gripper connect
     QCoreApplication app(argc, argv); // Initialize Qt application
     Gripper gripper; // Create an instance of Gripper
@@ -144,7 +144,48 @@ int main(int argc, char* argv[])
         rtde_control.moveL(pickUpDown, 0.2, 0.2);
         gripper.Grip(5, 36);
         rtde_control.moveL(pickUp, 0.2, 0.2);
-        rtde_control.moveL(from, 0.3, 0.3);
+        //rtde_control.moveJ({0 , -M_PI/2 , 0 , -0.51487 , M_PI/2, 0}, 0.1);
+        rtde_control.moveJ({-1.19394 , -M_PI/2 , 0 , -0.51487 , M_PI/2, 0}, 0.1);
+        rtde_control.moveJ({-1.19394 , -M_PI/2 , 0.7363 , -0.51487 , M_PI/2, 0}, 0.1);
+
+        // Start moving to the "to" position
+        std::thread releaseThread([&]() {
+            std::this_thread::sleep_for(std::chrono::milliseconds(195)); // Adjust delay to release mid-way
+            gripper.Command("RELEASE(2, 420)");  // Trigger gripper release
+        });
+
+        // Begin motion to "to" position, allowing release to occur mid-motion
+        rtde_control.moveJ({-1.19394 , -M_PI/2 , -0.7363 , -0.51487 , M_PI/2, 0}, 2.575+0.5, 40);
+
+        // Wait for the release thread to complete
+        releaseThread.join();
+        z++;
+    }
+
+
+    /*
+    //Gripper connect MOVEL funktion! OUTDATED! -------------------------------------------
+    QCoreApplication app(argc, argv); // Initialize Qt application
+    Gripper gripper; // Create an instance of Gripper
+    gripper.connectToServer("192.168.1.20", 1000); // Attempt to connect to the server
+
+    // Check if the connection was successful
+    if (!gripper.isConnected()) {
+        std::cout << "Failed to connect to the server." << std::endl;
+        return 1; // Exit if the connection was not successful
+    }
+
+    int z = 0;
+    while (z < 1){
+
+        gripper.Home();
+        rtde_control.moveL(pickUp, 0.2, 0.2);
+        rtde_control.moveL(pickUpDown, 0.2, 0.2);
+        gripper.Grip(5, 36);
+        //rtde_control.moveL(pickUp, 0.2, 0.2);
+        //rtde_control.moveL(from, 0.3, 0.3);
+
+        rtde_control.moveJ({0 , -M_PI/4 , 0 , 0.51487 , M_PI/4, 0});
 
         // Start moving to the "to" position
         std::thread releaseThread([&]() {
@@ -153,17 +194,11 @@ int main(int argc, char* argv[])
         });
 
         // Begin motion to "to" position, allowing release to occur mid-motion
-        rtde_control.moveL(to, 3, 40);
+        //rtde_control.moveL(to, 3, 40);
 
         // Wait for the release thread to complete
         releaseThread.join();
         z++;
-
         }
-*/
-
-
-
-
-
+        */
 }
