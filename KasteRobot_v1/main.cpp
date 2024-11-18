@@ -61,17 +61,18 @@ int main(int argc, char* argv[])
 {
 
     //Calibration of camera test that also prints transformation matrix
+    //When running on a new PC - change path in camera class.cpp (line: 5, 16, 418, 437)
     Camera visionCam;
     //Calibrates camera
     visionCam.calibrateCamera();
     //Captures a picture and saves it
-    visionCam.capturePicture();
+    //visionCam.capturePicture();
     //Warps the taken image before locating object for more precision
     visionCam.transformPicture();
     //Finds center of balls in picture
     visionCam.detectGreen();
     visionCam.ballDetect();
-    visionCam.centerOfMass();
+    //visionCam.centerOfMass();
     //Gets next point if any. If no balls left then -500, -500 is returned
     cv::Point2f ballPoint = visionCam.nextPoint();
     std::cout << "Ball 1 is located at: " << ballPoint.x << ", " << ballPoint.y << std::endl;
@@ -79,7 +80,6 @@ int main(int argc, char* argv[])
     std::cout << "Ball 2 is located at: " << ballPoint2.x << ", " << ballPoint2.y << std::endl;
     cv::Point2f ballPoint3 = visionCam.nextPoint();
     std::cout << "Ball 3 is located at: " << ballPoint3.x << ", " << ballPoint3.y << std::endl << std::endl;
-
     /*
     //Udregning til kørselsmønster / kast for robot
     Trajectory linaryThrow;

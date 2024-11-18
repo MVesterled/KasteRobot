@@ -1,7 +1,10 @@
 #include "Camera.h"
 
 Camera::Camera(){
-    mPicture = cv::imread("/home/matmat1000/Documents/ballTestPerspective.jpg");
+    //Change this file to your own path
+    mPicture = cv::imread("/home/matmat1000/C++/SemProjekt/KasteRobot_v1/Img/ballTest.jpg");
+    //cv::imshow("Default image", mPicture);
+    //cv::waitKey(0);
 }
 
 //Function that calibrates the camera view
@@ -9,10 +12,9 @@ void Camera::calibrateCamera(){
     std::cout << "Calibration started..." << std::endl;
     std::vector<cv::String> fileNames;
     //glob gets all files of a folder (false means no sub directories)
-    cv::glob("/home/matmat1000/Documents/Calibration_cpp/TestPic2/*.png", fileNames, false);
-    //cv::glob("/home/matmat1000/Documents/calibrationImages/*.png", fileNames, false);
+    //Change path to match your system
+    cv::glob("/home/matmat1000/C++/SemProjekt/KasteRobot_v1/Img/Calib/*.png", fileNames, false);
     cv::Size patternSize(9, 6); //internal corners of calibrationplate
-    //cv::Size patternSize(24, 17); //internal corners of calibrationplate
     // Declare a vector of vectors to store 2D points (found corners) for each image
     // The size of 'q' matches the number of files in 'fileNames', so each image will have a corresponding entry
     std::vector<std::vector<cv::Point2f>> q(fileNames.size());
@@ -156,8 +158,7 @@ cv::Mat Camera::getMapY() const{
 
 //Vizulize calibration:
 void Camera::transformPicture(){
-    cv::Mat input = cv::imread("/home/matmat1000/Documents/ballTest.jpg");
-    cv::Mat output;
+    //Warps picture by applying the homoMat
     cv::warpPerspective(mPicture, mPicture, mHomoMat, cv::Size(800,750)); // Use input size or desired output size
     std::cout << "Picture warpped succesfully!" << std::endl;
     //cv::imwrite("/home/matmat1000/Documents/ballTestPerspective.jpg", output);
@@ -177,9 +178,8 @@ void Camera::transformPicture(){
 }
 
 void Camera::ballDetect(){
-    //loads in image as grayscale
-    cv::Mat src_grey = 255*greenBallPicture;
-    //cv::cvtColor(greenBallPicture, src_grey, cv::COLOR_BGR2GRAY);
+    //loads in image as grayscale (Because of binary)
+    cv::Mat src_grey = 255*greenBallPicture;;
 
     //imshow("255*", src_grey);
     //cv::waitKey();
@@ -236,7 +236,6 @@ cv::Point2f Camera::nextPoint()
 
 void Camera::detectGreen()
 {
-    cv::Mat input = cv::imread("/home/matmat1000/Documents/ballTestPerspective.jpg", cv::IMREAD_COLOR);
     //Initializes temporary images for computation:
     cv::Mat imgHSV;
     //HSV values for the green colour wanted:
@@ -258,7 +257,6 @@ void Camera::detectGreen()
 
 void Camera::detectRed()
 {
-    cv::Mat input = cv::imread("/home/matmat1000/Documents/ballTestPerspective.jpg", cv::IMREAD_COLOR);
     //Initializes temporary images for computation:
     cv::Mat imgHSV;
     //HSV values for the green colour wanted:
@@ -413,11 +411,10 @@ int main()
 void Camera::centerOfMass(){
     //loads in image as grayscale
     cv::Mat src_grey = 255*greenBallPicture;
-    //cv::cvtColor(greenBallPicture, src_grey, cv::COLOR_BGR2GRAY);
 
     imshow("255*", src_grey);
     cv::waitKey();
-
+    //change to won path (saves center of mass picture)
     cv::imwrite("/home/matmat1000/Documents/centerOfMass.jpg", src_grey);
 
 
@@ -436,6 +433,7 @@ void Camera::centerOfMass(){
     } else {
         std::cerr << "No mass found in the image, cannot determine center." << std::endl;
     }
+    //change to won path (saves center of mass result-picture)
     cv::imwrite("/home/matmat1000/Documents/centerOfMassVSHough.jpg", mPicture);
 
 }
@@ -658,8 +656,8 @@ void Camera::capturePicture()
             cv::remap(img, undistortedImage, getMapX(), getMapY(), cv::INTER_LINEAR);
 
             std::cout << "Image captured successfully!" << std::endl;
-            //Save the image to disk for verification
-            cv::imwrite("/home/matmat1000/Documents/ballTestNew.jpg", undistortedImage);
+            //change to own path (saves picture)
+            //cv::imwrite("/home/matmat1000/Documents/ballTestNew.jpg", undistortedImage);
             mPicture = undistortedImage.clone();
             // Create an OpenCV display window
 /*
