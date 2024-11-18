@@ -53,7 +53,7 @@ else()
 endif()
 
 # Add the executable
-add_executable(KasteRobot main.cpp Camera.h Camera.cpp Gripper.h Gripper.cpp)
+add_executable(KasteRobot main.cpp Camera.h Camera.cpp Gripper.h Gripper.cpp Trajectory.h Trajectory.cpp)
 
 # Link libraries (OpenCV, Pylon, ur_rtde)
 target_link_libraries(KasteRobot PRIVATE ${OpenCV_LIBS} ur_rtde::rtde ${PYLON_LIBS} Qt5::Core Qt5::Network)

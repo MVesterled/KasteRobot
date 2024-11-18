@@ -7,6 +7,7 @@
 #include <opencv2/highgui.hpp>
 #include <opencv2/imgproc.hpp>
 #include <opencv2/opencv.hpp>
+#include <pylon/PylonIncludes.h>
 
 class Camera
 {
@@ -28,7 +29,25 @@ public:
     cv::Mat getMapY() const;
 
     //Vizulize calibration:
-    void visualizeCalib();
+    void transformPicture();
+
+    //function to return the center of balls
+    void ballDetect();
+    cv::Point2f nextPoint();
+
+    //finds the balls with coulerr
+    void detectGreen();
+    void detectRed();
+    void detectBlue();
+    void colourDetection();
+
+    void centerOfMass();
+
+    //Function to test camera live feed
+    void liveFeed();
+
+    //Capeture one  picture
+    void capturePicture();
 
 private:
     cv::Mat mHomoMat;
@@ -36,6 +55,11 @@ private:
     cv::Mat mMapY;
     std::vector<cv::Point2f> mImagePoints;
     std::vector<cv::Point2f> mRealWorldPoints;
+    std::vector<cv::Point2f> ballPoints;
+    cv::Mat greenBallPicture;
+    cv::Mat redBallPicture;
+    cv::Mat blueBallPicture;
+    cv::Mat mPicture;
 };
 
 #endif // CAMERA_H
