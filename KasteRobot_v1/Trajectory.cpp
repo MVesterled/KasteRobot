@@ -5,7 +5,7 @@ Trajectory::Trajectory() {
     mStartPunkt = std::make_pair(0.0, 0.3);
     mTopPunkt = std::make_pair(0.3 - mOffset / 2, 0.3);
     mThrowBuildUp = 0.2;
-    mL = 0.1;
+    mL = -0.10915;
 }
 
 Trajectory::Trajectory(std::pair<float, float> startPunkt, std::pair<float, float> topPunkt, float offset, float throwBuildUp) {
@@ -173,7 +173,7 @@ std::vector<float> Trajectory::getSpeedJOverhand(std::vector<float> target) {
     float throwDistance = std::sqrt(x * x + y * y - mL * mL);
     float velocity = getOverhandVelocity(z, throwDistance);
     float v_angle = std::atan2(y, x) + pi / 2;
-    float baseAngle = pi - B_angle - v_angle;
+    float baseAngle = -(pi - B_angle - v_angle);
     //output
     std::cout << "the base should be rotated " << baseAngle << " radians and the throw should have a start velocity of " << velocity << " m/s" << std::endl;
     return {};
