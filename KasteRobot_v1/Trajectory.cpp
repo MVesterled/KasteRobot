@@ -5,7 +5,7 @@ Trajectory::Trajectory() {
     mStartPunkt = std::make_pair(0.0, 0.3);
     mTopPunkt = std::make_pair(0.3 - mOffset / 2, 0.3);
     mThrowBuildUp = 0.2;
-    mL = -0.10915;
+    mTCPoffsetY = -0.10915;
 }
 
 Trajectory::Trajectory(std::pair<float, float> startPunkt, std::pair<float, float> topPunkt, float offset, float throwBuildUp) {
@@ -169,8 +169,8 @@ std::vector<float> Trajectory::getSpeedJOverhand(std::vector<float> target) {
     float z = target[2];
     //udregner base vinkel og velocity
     float hyp = std::sqrt(x * x + y * y);
-    float B_angle = std::acos(mL / hyp);
-    float throwDistance = std::sqrt(x * x + y * y - mL * mL);
+    float B_angle = std::acos(mTCPoffsetY / hyp);
+    float throwDistance = std::sqrt(x * x + y * y - mTCPoffsetY * mTCPoffsetY);
     float velocity = getOverhandVelocity(z, throwDistance);
     float v_angle = std::atan2(y, x) + pi / 2;
     float baseAngle = -(pi - B_angle - v_angle);
@@ -186,7 +186,7 @@ std::vector<float> Trajectory::jacobian2D(std::vector<float> angles, std::vector
     float qdot2 = jointVelocities[1];
 
     float l1 = 0.425;
-    float l2 = 1.18997 - l1 - 0.089159;
+    float l2 = 0.675811;
 
     float j11 = -l1 * std::sin(q1) - l2 * std::sin(q1 + q2);
     float j12 = -l2 * std::sin(q1 + q2);
@@ -208,7 +208,7 @@ std::vector<float> Trajectory::jacobianInverse2D(std::vector<float> angles, std:
     float vY = cartesianVelocity[1];
 
     float l1 = 0.425;
-    float l2 = 1.18997 - l1 - 0.089159;
+    float l2 = 0.675811;
 
     float j11 = -l1 * std::sin(q1) - l2 * std::sin(q1 + q2);
     float j12 = -l2 * std::sin(q1 + q2);
@@ -233,4 +233,19 @@ std::vector<float> Trajectory::jacobianInverse2D(std::vector<float> angles, std:
     }
 
     return { joint1Velocity, joint2Velocity };
+}
+
+std::vector<float> Trajectory::getQubicVelocityProfile(float throwVelocity) {
+    float timeTillRelease = 1.0 / throwVelocity;
+
+    std::pair<float, float> punkt1 = std::make_pair(0.0, 0.0);
+    std::pair<float, float> punkt2 = std::make_pair(timeTillRelease, throwVelocity);
+    std::pair<float, float> punkt3 = std::make_pair(timeTillRelease * 2, throwVelocity);
+
+    std::vector<float> output = parabel3punkter(punkt1, punkt2, punkt3);
+
+    mQubicVelocityProfileA = output[0];
+    mQubicVelocityProfileB = output[1];
+
+    return output;
 }

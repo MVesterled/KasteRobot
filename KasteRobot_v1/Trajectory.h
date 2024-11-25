@@ -25,6 +25,7 @@ public:
     std::vector<float> getSpeedJOverhand(std::vector<float> target);
     std::vector<float> jacobian2D(std::vector<float> angles, std::vector<float> jointVelocities);
     std::vector<float> jacobianInverse2D(std::vector<float> angles, std::vector<float> cartesianVelocity);
+    std::vector<float> getQubicVelocityProfile(float throwVelocity);
 
 private:
     std::pair<float, float> mStartPunkt;
