@@ -21,12 +21,17 @@ public:
     std::vector<float> getMoveLTrajectory(std::vector<float> target);
 
     //speedJ
-    float getVelocity(float targetHeight, float targetDistance, float startHeight);
-    std::vector<float> getSpeedJTrajectory(std::vector<float> target, float startHeight);
+    float getOverhandVelocity(float targetHeight, float targetDistance);
+    std::vector<float> getSpeedJOverhand(std::vector<float> target);
+    std::vector<float> jacobian2D(std::vector<float> angles, std::vector<float> jointVelocities);
+    std::vector<float> jacobianInverse2D(std::vector<float> angles, std::vector<float> cartesianVelocity);
+    float buildQubicVelocityProfile(float throwVelocity);
+    float getVelocityFromQubicProfile(float time);
 
 private:
     std::pair<float, float> mStartPunkt;
     std::pair<float, float> mTopPunkt;
-    float mOffset, mThrowBuildUp, mL;
+    float mOffset, mThrowBuildUp, mTCPoffsetY, mQubicVelocityProfileA, mQubicVelocityProfileB;
+
 };
 

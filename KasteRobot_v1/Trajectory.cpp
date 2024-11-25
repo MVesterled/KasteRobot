@@ -5,7 +5,7 @@ Trajectory::Trajectory(){
     mStartPunkt = std::make_pair(0.0, 0.3);
     mTopPunkt = std::make_pair(0.3-mOffset/2, 0.3);
     mThrowBuildUp = 0.2;
-    mL = 0.1;
+    mTCPoffsetY = -0.10915;
 }
 
 Trajectory::Trajectory(std::pair<float, float> startPunkt, std::pair<float, float> topPunkt, float offset, float throwBuildUp){
@@ -152,15 +152,15 @@ std::vector<float> Trajectory::getMoveLTrajectory(std::vector<float> target) {
     return { throwStart[0], throwStart[1], throwStart[2], throwEnd[0], throwEnd[1], throwEnd[2], throwRelease[0], throwRelease[1], throwRelease[2], velocity, timeToRelease, targetAngle };
 }
 
-float Trajectory::getVelocity(float targetHeight, float targetDistance, float startHeight) {
+float Trajectory::getOverhandVelocity(float targetHeight, float targetDistance) {
     float g = 9.8;
     float x = targetDistance;
     float z = targetHeight;
-    float velocity = std::sqrt((-g * x * x) / (2 * z - 2 * startHeight));
+    float velocity = std::sqrt((-g * x * x) / (2 * z - 2 * 1.18997));
     return velocity;
 }
 
-std::vector<float> Trajectory::getSpeedJTrajectory(std::vector<float> target, float startHeight) {
+std::vector<float> Trajectory::getSpeedJOverhand(std::vector<float> target) {
     float pi = 3.14159;
     //transformere fra cornerframe til robotbaseframe
     target = corner2BaseTransformation(target);
@@ -169,12 +169,87 @@ std::vector<float> Trajectory::getSpeedJTrajectory(std::vector<float> target, fl
     float z = target[2];
     //udregner base vinkel og velocity
     float hyp = std::sqrt(x * x + y * y);
-    float B_angle = std::acos(mL / hyp);
-    float throwDistance = std::sqrt(x*x+y*y-mL*mL);
-    float velocity = getVelocity(z, throwDistance, startHeight);
-    float v_angle = std::atan2(y,x) + pi/2;
-    float baseAngle = pi - B_angle - v_angle;
+    float B_angle = std::acos(mTCPoffsetY / hyp);
+    float throwDistance = std::sqrt(x * x + y * y - mTCPoffsetY * mTCPoffsetY);
+    float velocity = getOverhandVelocity(z, throwDistance);
+    float v_angle = std::atan2(y, x) + pi / 2;
+    float baseAngle = -(pi - B_angle - v_angle);
     //output
     std::cout << "the base should be rotated " << baseAngle << " radians and the throw should have a start velocity of " << velocity << " m/s" << std::endl;
-    return {};
+    return {baseAngle, velocity};
+}
+
+std::vector<float> Trajectory::jacobian2D(std::vector<float> angles, std::vector<float> jointVelocities) {
+    float q1 = angles[0];
+    float q2 = angles[1];
+    float qdot1 = jointVelocities[0];
+    float qdot2 = jointVelocities[1];
+
+    float l1 = 0.425;
+    float l2 = 0.675811;
+
+    float j11 = -l1 * std::sin(q1) - l2 * std::sin(q1 + q2);
+    float j12 = -l2 * std::sin(q1 + q2);
+    float j21 = l1 * std::cos(q1) + l2 * std::cos(q1 + q2);
+    float j22 = l2 * std::cos(q1 + q2);
+
+    float velocityX = j11 * qdot1 + j12 * qdot2;
+    float velocityY = j21 * qdot1 + j22 * qdot2;
+
+    std::cout << "x: " << velocityX << " y: " << velocityY << std::endl;
+
+    return { velocityX, velocityY };
+}
+
+std::vector<float> Trajectory::jacobianInverse2D(std::vector<float> angles, std::vector<float> cartesianVelocity) {
+    float q1 = angles[0];
+    float q2 = angles[1];
+    float vX = cartesianVelocity[0];
+    float vY = cartesianVelocity[1];
+
+    float l1 = 0.425;
+    float l2 = 0.675811;
+
+    float j11 = -l1 * std::sin(q1) - l2 * std::sin(q1 + q2);
+    float j12 = -l2 * std::sin(q1 + q2);
+    float j21 = l1 * std::cos(q1) + l2 * std::cos(q1 + q2);
+    float j22 = l2 * std::cos(q1 + q2);
+
+    float determinant = j11 * j22 - j12 * j21;
+
+    float invj11 = j22 / determinant;
+    float invj12 = -j12 / determinant;
+    float invj21 = -j21 / determinant;
+    float invj22 = j11 / determinant;
+
+    float joint1Velocity = invj11 * vX + invj12 * vY;
+    float joint2Velocity = invj21 * vX + invj22 * vY;
+
+    std::cout << "joint 1: " << joint1Velocity << " joint 2: " << joint2Velocity << " determinant: " << determinant << std::endl;
+
+    if (std::abs(determinant) < 0.0001) {
+        std::cout << "error: at or close to singularity" << std::endl;
+        return { 0,0 };
+    }
+
+    return { joint1Velocity, joint2Velocity };
+}
+
+float Trajectory::buildQubicVelocityProfile(float throwVelocity) {
+    float timeTillRelease = 1.0 / throwVelocity;
+
+    std::pair<float, float> punkt1 = std::make_pair(0.0, 0.0);
+    std::pair<float, float> punkt2 = std::make_pair(timeTillRelease, throwVelocity);
+    std::pair<float, float> punkt3 = std::make_pair(timeTillRelease * 2, throwVelocity);
+
+    std::vector<float> profile = parabel3punkter(punkt1, punkt2, punkt3);
+
+    mQubicVelocityProfileA = profile[0];
+    mQubicVelocityProfileB = profile[1];
+
+    return timeTillRelease;
+}
+
+float Trajectory::getVelocityFromQubicProfile(float time) {
+    return mQubicVelocityProfileA * time * time + mQubicVelocityProfileB * time;
 }

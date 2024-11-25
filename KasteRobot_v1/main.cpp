@@ -98,7 +98,7 @@ int main(int argc, char* argv[])
 
     // Robot connection and Setup parameters
     std::string robot_ip = "192.168.1.54";
-    double rtde_frequency = 500.0; // Hz
+    double rtde_frequency = 125.0; // Hz
     double dt = 1.0 / rtde_frequency; // 2ms
     uint16_t flags = RTDEControlInterface::FLAG_VERBOSE | RTDEControlInterface::FLAG_UPLOAD_SCRIPT;
     int ur_cap_port = 50002;
@@ -136,6 +136,37 @@ int main(int argc, char* argv[])
         return 1; // Exit if the connection was not successful
     }
 
+    // Parameters
+    double acceleration = 0.3;
+    std::vector<double> start_joint_q = {-1.19394 , -M_PI/2 , 0 , -0.51487 , M_PI/2, 0};
+    std::vector<double> joint_speed = {0.0, 0.0, 0.0, 0.0, 0.0, 0.0};
+
+    // Move to initial joint position with a regular moveJ
+    rtde_control.moveJ(start_joint_q, 0.3, 0.3);
+
+    Trajectory speedJThrow;
+    std::vector<float> params = speedJThrow.getSpeedJOverhand({0.5,0.1,0});//indsætter target og for baseangle og velocity
+    speedJThrow.buildQubicVelocityProfile(params[1]);
+
+    // Execute 125Hz control loop for 2 seconds, each cycle is ~2ms
+    for (unsigned int i=0; i<1000; i++)
+    {
+        steady_clock::time_point t_start = rtde_control.initPeriod();
+        rtde_control.speedJ(joint_speed, acceleration, dt);
+        joint_speed[1] -= 0.0001;
+        joint_speed[2] -= 0.0001;
+        if(std::abs(joint_speed[1]) >= 0.5)
+            break;
+        rtde_control.waitPeriod(t_start);
+    }
+
+    rtde_control.speedStop();
+    rtde_control.stopScript();
+
+    return 0;
+
+/*
+    // moveJ example, OUTDATED! ----------------------
     int z = 0;
     while (z < 1){
 
@@ -162,8 +193,7 @@ int main(int argc, char* argv[])
         z++;
     }
 
-
-    /*
+/*
     //Gripper connect MOVEL funktion! OUTDATED! -------------------------------------------
     QCoreApplication app(argc, argv); // Initialize Qt application
     Gripper gripper; // Create an instance of Gripper
