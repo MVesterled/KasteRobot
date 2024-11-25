@@ -176,7 +176,7 @@ std::vector<float> Trajectory::getSpeedJOverhand(std::vector<float> target) {
     float baseAngle = -(pi - B_angle - v_angle);
     //output
     std::cout << "the base should be rotated " << baseAngle << " radians and the throw should have a start velocity of " << velocity << " m/s" << std::endl;
-    return {};
+    return {baseAngle, velocity};
 }
 
 std::vector<float> Trajectory::jacobian2D(std::vector<float> angles, std::vector<float> jointVelocities) {
@@ -235,17 +235,21 @@ std::vector<float> Trajectory::jacobianInverse2D(std::vector<float> angles, std:
     return { joint1Velocity, joint2Velocity };
 }
 
-std::vector<float> Trajectory::getQubicVelocityProfile(float throwVelocity) {
+float Trajectory::buildQubicVelocityProfile(float throwVelocity) {
     float timeTillRelease = 1.0 / throwVelocity;
 
     std::pair<float, float> punkt1 = std::make_pair(0.0, 0.0);
     std::pair<float, float> punkt2 = std::make_pair(timeTillRelease, throwVelocity);
     std::pair<float, float> punkt3 = std::make_pair(timeTillRelease * 2, throwVelocity);
 
-    std::vector<float> output = parabel3punkter(punkt1, punkt2, punkt3);
+    std::vector<float> profile = parabel3punkter(punkt1, punkt2, punkt3);
 
-    mQubicVelocityProfileA = output[0];
-    mQubicVelocityProfileB = output[1];
+    mQubicVelocityProfileA = profile[0];
+    mQubicVelocityProfileB = profile[1];
 
-    return output;
+    return timeTillRelease;
+}
+
+float Trajectory::getVelocityFromQubicProfile(float time) {
+    return mQubicVelocityProfileA * time * time + mQubicVelocityProfileB * time;
 }
