@@ -135,29 +135,41 @@ int main(int argc, char* argv[])
         std::cout << "Failed to connect to the server." << std::endl;
         return 1; // Exit if the connection was not successful
     }
-
+    // Real time movement
     // Parameters
-    double acceleration = 0.3;
-    std::vector<double> start_joint_q = {-1.19394 , -M_PI/2 , 0 , -0.51487 , M_PI/2, 0};
+    double acceleration = 40;
+    std::vector<double> start_joint_q = {-1.19394 , -1.0508627 , -0.7332036732 , -0.51487 , M_PI/2, 0};
     std::vector<double> joint_speed = {0.0, 0.0, 0.0, 0.0, 0.0, 0.0};
 
     // Move to initial joint position with a regular moveJ
     rtde_control.moveJ(start_joint_q, 0.3, 0.3);
 
     Trajectory speedJThrow;
-    std::vector<float> params = speedJThrow.getSpeedJOverhand({0.5,0.1,0});//indsætter target og for baseangle og velocity
-    speedJThrow.buildQubicVelocityProfile(params[1]);
+    std::vector<float> tabelTarget = {0.5,0.1,0};
+    float buildUpTime = speedJThrow.buildQubicVelocityProfile(tabelTarget);
+    std::vector<float> startPose = speedJThrow.getStartPose(tabelTarget);
+    rtde_control.moveJ({startPose[0], startPose[1], startPose[2], -0.51487, M_PI/2, 0}, 0.3);
 
-    // Execute 125Hz control loop for 2 seconds, each cycle is ~2ms
-    for (unsigned int i=0; i<1000; i++)
+    float realTime = 0;
+    std::vector<float> jointSpeedF = {0,0};
+    std::vector<float> unitVector = speedJThrow.getUnitJointVelocity(tabelTarget);
+
+    // Execute 125Hz control loop for 2 seconds, each cycle is ~8ms
+    for (unsigned int i=0; i<130; i++)
     {
         steady_clock::time_point t_start = rtde_control.initPeriod();
         rtde_control.speedJ(joint_speed, acceleration, dt);
-        joint_speed[1] -= 0.0001;
-        joint_speed[2] -= 0.0001;
-        if(std::abs(joint_speed[1]) >= 0.5)
+
+        jointSpeedF = speedJThrow.getVelocityFromQubicProfile(realTime, unitVector);
+
+        if(realTime > buildUpTime)
             break;
+
+        joint_speed[1] = static_cast<double>(jointSpeedF[0]);
+        joint_speed[2] = static_cast<double>(jointSpeedF[1]);
+
         rtde_control.waitPeriod(t_start);
+        realTime += 0.008;
     }
 
     rtde_control.speedStop();
