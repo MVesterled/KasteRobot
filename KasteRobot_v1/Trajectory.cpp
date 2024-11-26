@@ -6,6 +6,10 @@ Trajectory::Trajectory() {
     mTopPunkt = std::make_pair(0.3 - mOffset / 2, 0.3);
     mThrowBuildUp = 0.2;
     mTCPoffsetY = -0.10915;
+    mStartHeight = 1.1;
+    mQubicVelocityProfileA = 0;
+    mQubicVelocityProfileB = 0;
+    mThrowPose = { -1.0509, -0.7332 };
 }
 
 Trajectory::Trajectory(std::pair<float, float> startPunkt, std::pair<float, float> topPunkt, float offset, float throwBuildUp) {
@@ -140,13 +144,8 @@ std::vector<float> Trajectory::getMoveLTrajectory(std::vector<float> target) {
     throwRelease = rotateZ(targetAngle, throwRelease);
     throwEnd = rotateZ(targetAngle, throwEnd);
     throwStart = rotateZ(targetAngle, throwStart);
-    /*
-    //transformere fra robotbaseframe til cornerframe
-    throwRelease = base2CornerTransformation(throwRelease);
-    throwEnd = base2CornerTransformation(throwEnd);
-    throwStart = base2CornerTransformation(throwStart);
-*/
-//output
+
+    //output
     std::cout << "All coordinates are in base frame. The throw should start in ( " << throwStart[0] << " , " << throwStart[1] << " , " << throwStart[2] << " ) and end in ( " << throwEnd[0] << " , " << throwEnd[1] << " , " << throwEnd[2] << " ), with a velocity of " << velocity << " m / s. the ball should be released in ( " << throwRelease[0] << " , " << throwRelease[1] << " , " << throwRelease[2] << " ) or " << timeToRelease << " s after the throw has started." << std::endl;
     std::cout << "the angle the gripper should be is" << targetAngle << std::endl;
     return { throwStart[0], throwStart[1], throwStart[2], throwEnd[0], throwEnd[1], throwEnd[2], throwRelease[0], throwRelease[1], throwRelease[2], velocity, timeToRelease, targetAngle };
@@ -156,7 +155,7 @@ float Trajectory::getOverhandVelocity(float targetHeight, float targetDistance) 
     float g = 9.8;
     float x = targetDistance;
     float z = targetHeight;
-    float velocity = std::sqrt((-g * x * x) / (2 * z - 2 * 1.18997));
+    float velocity = std::sqrt((-g * x * x) / (2 * z - 2 * mStartHeight));
     return velocity;
 }
 
@@ -235,21 +234,61 @@ std::vector<float> Trajectory::jacobianInverse2D(std::vector<float> angles, std:
     return { joint1Velocity, joint2Velocity };
 }
 
-float Trajectory::buildQubicVelocityProfile(float throwVelocity) {
-    float timeTillRelease = 1.0 / throwVelocity;
+float Trajectory::buildQubicVelocityProfile(std::vector<float> target) {
+    float rampUpTime = 0.25;
+
+    std::vector<float> angleAndVelocity = getSpeedJOverhand(target);
+    std::vector<float> jointVelocities = jacobianInverse2D(mThrowPose, { -angleAndVelocity[1],0 });
+
+    float shoulderJointVelocity = jointVelocities[0];
+    float elbowJointVelocity = jointVelocities[1];
+
+    float throwVelocityJoints = std::sqrt(shoulderJointVelocity * shoulderJointVelocity + elbowJointVelocity * elbowJointVelocity);
 
     std::pair<float, float> punkt1 = std::make_pair(0.0, 0.0);
-    std::pair<float, float> punkt2 = std::make_pair(timeTillRelease, throwVelocity);
-    std::pair<float, float> punkt3 = std::make_pair(timeTillRelease * 2, throwVelocity);
+    std::pair<float, float> punkt2 = std::make_pair(rampUpTime, throwVelocityJoints);
+    std::pair<float, float> punkt3 = std::make_pair(rampUpTime * 2, 0.0);
 
     std::vector<float> profile = parabel3punkter(punkt1, punkt2, punkt3);
 
     mQubicVelocityProfileA = profile[0];
     mQubicVelocityProfileB = profile[1];
 
-    return timeTillRelease;
+    return rampUpTime;
 }
 
-float Trajectory::getVelocityFromQubicProfile(float time) {
-    return mQubicVelocityProfileA * time * time + mQubicVelocityProfileB * time;
+std::vector<float> Trajectory::getVelocityFromQubicProfile(float time, std::vector<float> unitVector) {
+    float velocityMagnitude = mQubicVelocityProfileA * time * time + mQubicVelocityProfileB * time;
+    return { velocityMagnitude * unitVector[0], velocityMagnitude * unitVector[1] };
+}
+
+std::vector<float> Trajectory::getUnitJointVelocity(std::vector<float> target) {
+    std::vector<float> angleAndVelocity = getSpeedJOverhand(target);
+    std::vector<float> jointVelocities = jacobianInverse2D(mThrowPose, { -angleAndVelocity[1],0 });
+
+    float shoulderJointVelocity = jointVelocities[0];
+    float elbowJointVelocity = jointVelocities[1];
+
+    float shoulderUnitVelocity = shoulderJointVelocity / std::sqrt(shoulderJointVelocity * shoulderJointVelocity + elbowJointVelocity * elbowJointVelocity);
+    float elbowUnitVelocity = elbowJointVelocity / std::sqrt(shoulderJointVelocity * shoulderJointVelocity + elbowJointVelocity * elbowJointVelocity);
+
+    return { shoulderUnitVelocity, elbowUnitVelocity };
+}
+
+std::vector<float> Trajectory::getStartPose(std::vector<float> target) {
+    float deltaD = 0.5;
+
+    std::vector<float> angleAndVelocity = getSpeedJOverhand(target);
+    std::vector<float> jointVelocities = jacobianInverse2D(mThrowPose,{ -angleAndVelocity[1],0 });
+
+    float shoulderJointVelocity = jointVelocities[0];
+    float elbowJointVelocity = jointVelocities[1];
+
+    float shoulderUnitVelocity = shoulderJointVelocity / std::sqrt(shoulderJointVelocity * shoulderJointVelocity + elbowJointVelocity * elbowJointVelocity);
+    float elbowUnitVelocity = elbowJointVelocity / std::sqrt(shoulderJointVelocity * shoulderJointVelocity + elbowJointVelocity * elbowJointVelocity);
+
+    float shoulderStartPose = mThrowPose[0] - shoulderUnitVelocity * deltaD;
+    float elbowStartPose = mThrowPose[1] - elbowUnitVelocity * deltaD;
+
+    return { angleAndVelocity[0], shoulderStartPose, elbowStartPose };
 }
