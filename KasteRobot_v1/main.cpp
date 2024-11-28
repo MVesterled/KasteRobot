@@ -86,10 +86,10 @@ int main(int argc, char* argv[])
     //Point where ball is
     std::vector<float> target =  {600.0/1000.0, 200.0/1000.0, -0.1};
     //Findes koordinates in base fram from robot
-    std::vector<float> koordinates = linaryThrow.getMoveLTrajectory(target);
+    //std::vector<float> koordinates = linaryThrow.(target);
     //robot points
-    std::vector<double> from = {koordinates[0], koordinates[1], koordinates[2], 0.622, -3.065, 0.029};
-    std::vector<double> to = {koordinates[3], koordinates[4], koordinates[5], 0.622, -3.065, 0.029};
+    //std::vector<double> from = {koordinates[0], koordinates[1], koordinates[2], 0.622, -3.065, 0.029};
+    //std::vector<double> to = {koordinates[3], koordinates[4], koordinates[5], 0.622, -3.065, 0.029};
 
     //Udregning af bold pos
     std::vector<double> pickUp = cornerToFrame(ballPoint.x/1000, ballPoint.y/1000, -0.20);
@@ -135,19 +135,115 @@ int main(int argc, char* argv[])
         std::cout << "Failed to connect to the server." << std::endl;
         return 1; // Exit if the connection was not successful
     }
+
     // Real time movement
     // Parameters
     double acceleration = 40;
-    std::vector<double> start_joint_q = {-1.19394 , -1.0508627 , -0.7332036732 , -0.51487 , M_PI/2, 0};
+    double throwTol = 0.04;
+    float rampUpTime = 0.3;
+    float deltaD = 0.5;
+    std::vector<double> throwPose= {-1.19394 , -1.0508627 , -0.7332036732 , -0.51487 , M_PI/2, 0};
     std::vector<double> joint_speed = {0.0, 0.0, 0.0, 0.0, 0.0, 0.0};
-
-    // Move to initial joint position with a regular moveJ
-    rtde_control.moveJ(start_joint_q, 0.3, 0.3);
 
     Trajectory speedJThrow;
     std::vector<float> tabelTarget = {0.5,0.1,0};
-    float buildUpTime = speedJThrow.buildQubicVelocityProfile(tabelTarget);
+    std::vector<double> currentPose = {0,0,0,0,0,0};
+
+    speedJThrow.buildQubicVelocityProfiles(tabelTarget, rampUpTime, 1.5);
+
+    std::vector<float> startPose = speedJThrow.getStartPose(tabelTarget, deltaD);
+
+
+    gripper.Home();
+    rtde_control.moveL(pickUp, 0.2, 0.2);
+    rtde_control.moveL(pickUpDown, 0.2, 0.2);
+    gripper.Grip(5, 36);
+    rtde_control.moveL(pickUp, 0.2, 0.2);
+    rtde_control.moveJ(throwPose, 0.3, 0.3);
+    rtde_control.moveJ({startPose[0], startPose[1], startPose[2], -0.51487, M_PI/2, 0}, 0.3);
+
+    float realTime = 0;
+    std::vector<float> jointSpeedF = {0,0};
+    std::vector<float> unitVector = speedJThrow.getUnitVector(tabelTarget);
+    std::vector<float> targetJointSpeeds = speedJThrow.getTargetJointSpeeds(tabelTarget);
+
+    // Execute 125Hz control loop for 2 seconds, each cycle is ~8ms
+    for (unsigned int i=0; i<130; i++)
+    {
+        steady_clock::time_point t_start = rtde_control.initPeriod();
+        rtde_control.speedJ(joint_speed, acceleration, dt);
+
+        std::cout << "Actual: " << abs(rtde_receive.getActualQd()[2]) << " Aiming for speed: " <<joint_speed[2] << " Current Time: " << realTime <<std::endl;
+        jointSpeedF = speedJThrow.getRampUpVelocity(realTime, unitVector, targetJointSpeeds);
+
+        if(realTime > rampUpTime){
+            break;
+        }
+        else{
+            joint_speed[1] = static_cast<double>(jointSpeedF[0]-0.1);
+            joint_speed[2] = static_cast<double>(jointSpeedF[1]-0.1);
+        }
+
+        rtde_control.waitPeriod(t_start);
+        realTime += 0.008;
+    }
+
+    while((abs(currentPose[2]) + throwTol < abs(throwPose[2]))){
+        currentPose = rtde_receive.getActualQ();
+        //std::cout << "neek: " << currentPose[2] << std::endl;
+    }
+
+    std::thread releaseThread([&]() {
+        //std::this_thread::sleep_for(std::chrono::milliseconds(185)); // Adjust delay to release mid-way
+        gripper.Command("RELEASE(2, 420)");  // Trigger gripper release
+    });
+
+    realTime = 0;
+
+    for (unsigned int i=0; i<130; i++)
+    {
+        steady_clock::time_point t_start = rtde_control.initPeriod();
+        rtde_control.speedJ(joint_speed, acceleration, dt);
+
+        jointSpeedF = speedJThrow.getRampDownVelocity(realTime, unitVector);
+
+        if(realTime > rampUpTime)
+            break;
+
+        std::cout << "Actual: " << abs(rtde_receive.getActualQd()[2]) << " Aiming for speed: " <<joint_speed[2] << " Current Time: " << realTime <<std::endl;
+        joint_speed[1] = static_cast<double>(jointSpeedF[0]);
+        joint_speed[2] = static_cast<double>(jointSpeedF[1]);
+
+        rtde_control.waitPeriod(t_start);
+        realTime += 0.008;
+    }
+
+    rtde_control.speedStop();
+    rtde_control.stopScript();
+
+    /* --------------- Forste speedJ OUTDATED!
+    // Real time movement
+    // Parameters
+    double acceleration = 40;
+    double throwTol = 0.04;
+    std::vector<double> throwPose= {-1.19394 , -1.0508627 , -0.7332036732 , -0.51487 , M_PI/2, 0};
+    std::vector<double> joint_speed = {0.0, 0.0, 0.0, 0.0, 0.0, 0.0};
+
+    Trajectory speedJThrow;
+    std::vector<float> tabelTarget = {0.5,0.1,0};
+    std::vector<double> currentPose = {0,0,0,0,0,0};
+
+    float buildUpTime = speedJThrow.buildQubicVelocityProfiles(tabelTarget);
+
     std::vector<float> startPose = speedJThrow.getStartPose(tabelTarget);
+
+
+    gripper.Home();
+    rtde_control.moveL(pickUp, 0.2, 0.2);
+    rtde_control.moveL(pickUpDown, 0.2, 0.2);
+    gripper.Grip(5, 36);
+    rtde_control.moveL(pickUp, 0.2, 0.2);
+    rtde_control.moveJ(throwPose, 0.3, 0.3);
     rtde_control.moveJ({startPose[0], startPose[1], startPose[2], -0.51487, M_PI/2, 0}, 0.3);
 
     float realTime = 0;
@@ -160,11 +256,44 @@ int main(int argc, char* argv[])
         steady_clock::time_point t_start = rtde_control.initPeriod();
         rtde_control.speedJ(joint_speed, acceleration, dt);
 
-        jointSpeedF = speedJThrow.getVelocityFromQubicProfile(realTime, unitVector);
+        std::cout << "Actual: " << abs(rtde_receive.getActualQd()[2]) << " Aiming for speed: " <<joint_speed[2] << " Current Time: " << realTime <<std::endl;
+        jointSpeedF = speedJThrow.getRampUpVelocity(realTime, unitVector);
+
+        if(realTime > buildUpTime){
+            break;
+        }
+        else{
+            joint_speed[1] = static_cast<double>(jointSpeedF[0]);
+            joint_speed[2] = static_cast<double>(jointSpeedF[1]);
+        }
+
+        rtde_control.waitPeriod(t_start);
+        realTime += 0.008;
+    }
+
+    while((abs(currentPose[2]) + throwTol < abs(throwPose[2]))){
+        currentPose = rtde_receive.getActualQ();
+        std::cout << "neek: " << currentPose[2] << std::endl;
+    }
+
+    std::thread releaseThread([&]() {
+        //std::this_thread::sleep_for(std::chrono::milliseconds(185)); // Adjust delay to release mid-way
+        gripper.Command("RELEASE(2, 420)");  // Trigger gripper release
+    });
+
+    realTime = 0;
+
+    for (unsigned int i=0; i<130; i++)
+    {
+        steady_clock::time_point t_start = rtde_control.initPeriod();
+        rtde_control.speedJ(joint_speed, acceleration, dt);
+
+        jointSpeedF = speedJThrow.getRampDownVelocity(realTime, unitVector);
 
         if(realTime > buildUpTime)
             break;
 
+        std::cout << "Actual: " << abs(rtde_receive.getActualQd()[2]) << " Aiming for speed: " <<joint_speed[2] << " Current Time: " << realTime <<std::endl;
         joint_speed[1] = static_cast<double>(jointSpeedF[0]);
         joint_speed[2] = static_cast<double>(jointSpeedF[1]);
 
@@ -175,7 +304,6 @@ int main(int argc, char* argv[])
     rtde_control.speedStop();
     rtde_control.stopScript();
 
-    return 0;
 
 /*
     // moveJ example, OUTDATED! ----------------------
