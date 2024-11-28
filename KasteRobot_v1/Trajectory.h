@@ -25,8 +25,9 @@ public:
     std::vector<float> getSpeedJOverhand(std::vector<float> target);
     std::vector<float> jacobian2D(std::vector<float> angles, std::vector<float> jointVelocities);
     std::vector<float> jacobianInverse2D(std::vector<float> angles, std::vector<float> cartesianVelocity);
-    float buildQubicVelocityProfile(std::vector<float> target);
-    std::vector<float> getVelocityFromQubicProfile(float time, std::vector<float> unitVector);
+    float buildQubicVelocityProfiles(std::vector<float> target);
+    std::vector<float> getRampUpVelocity(float time, std::vector<float> unitVector);
+    std::vector<float> getRampDownVelocity(float time, std::vector<float> unitVector);
     std::vector<float> getUnitJointVelocity(std::vector<float> target);
     std::vector<float> getStartPose(std::vector<float> target);
 
@@ -34,5 +35,6 @@ private:
     std::pair<float, float> mStartPunkt;
     std::pair<float, float> mTopPunkt;
     std::vector<float> mThrowPose;
-    float mOffset, mThrowBuildUp, mTCPoffsetY, mQubicVelocityProfileA, mQubicVelocityProfileB, mStartHeight;
+    float mOffset, mThrowBuildUp, mTCPoffsetY, mStartHeight;
+    float mRampUpProfileA, mRampUpProfileB, mRampUpProfileC, mRampDownProfileA, mRampDownProfileB, mRampDownProfileC;
 };

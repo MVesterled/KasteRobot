@@ -7,8 +7,8 @@ Trajectory::Trajectory() {
     mThrowBuildUp = 0.2;
     mTCPoffsetY = -0.10915;
     mStartHeight = 1.1;
-    mQubicVelocityProfileA = 0;
-    mQubicVelocityProfileB = 0;
+    mRampUpProfileA = 0;
+    mRampUpProfileB = 0;
     mThrowPose = { -1.0509, -0.7332 };
 }
 
@@ -234,7 +234,7 @@ std::vector<float> Trajectory::jacobianInverse2D(std::vector<float> angles, std:
     return { joint1Velocity, joint2Velocity };
 }
 
-float Trajectory::buildQubicVelocityProfile(std::vector<float> target) {
+float Trajectory::buildQubicVelocityProfiles(std::vector<float> target) {
     float rampUpTime = 0.25;
 
     std::vector<float> angleAndVelocity = getSpeedJOverhand(target);
@@ -251,14 +251,23 @@ float Trajectory::buildQubicVelocityProfile(std::vector<float> target) {
 
     std::vector<float> profile = parabel3punkter(punkt1, punkt2, punkt3);
 
-    mQubicVelocityProfileA = profile[0];
-    mQubicVelocityProfileB = profile[1];
+    mRampUpProfileA = profile[0];
+    mRampUpProfileB = profile[1];
+    mRampUpProfileC = 0;
+    mRampDownProfileA = profile[0];
+    mRampDownProfileB = 0;
+    mRampDownProfileC = throwVelocityJoints;
 
     return rampUpTime;
 }
 
-std::vector<float> Trajectory::getVelocityFromQubicProfile(float time, std::vector<float> unitVector) {
-    float velocityMagnitude = mQubicVelocityProfileA * time * time + mQubicVelocityProfileB * time;
+std::vector<float> Trajectory::getRampUpVelocity(float time, std::vector<float> unitVector) {
+    float velocityMagnitude = mRampUpProfileA * time * time + mRampUpProfileB * time + mRampUpProfileC;
+    return { velocityMagnitude * unitVector[0], velocityMagnitude * unitVector[1] };
+}
+
+std::vector<float> Trajectory::getRampDownVelocity(float time, std::vector<float> unitVector) {
+    float velocityMagnitude = mRampDownProfileA * time * time + mRampDownProfileB * time + mRampDownProfileC;
     return { velocityMagnitude * unitVector[0], velocityMagnitude * unitVector[1] };
 }
 
