@@ -234,8 +234,7 @@ std::vector<float> Trajectory::jacobianInverse2D(std::vector<float> angles, std:
     return { joint1Velocity, joint2Velocity };
 }
 
-float Trajectory::buildQubicVelocityProfiles(std::vector<float> target) {
-    float rampUpTime = 0.25;
+void Trajectory::buildQubicVelocityProfiles(std::vector<float> target, float rampUpTime) {
 
     std::vector<float> angleAndVelocity = getSpeedJOverhand(target);
     std::vector<float> jointVelocities = jacobianInverse2D(mThrowPose, { -angleAndVelocity[1],0 });
@@ -257,8 +256,6 @@ float Trajectory::buildQubicVelocityProfiles(std::vector<float> target) {
     mRampDownProfileA = profile[0];
     mRampDownProfileB = 0;
     mRampDownProfileC = throwVelocityJoints;
-
-    return rampUpTime;
 }
 
 std::vector<float> Trajectory::getRampUpVelocity(float time, std::vector<float> unitVector) {
@@ -284,8 +281,7 @@ std::vector<float> Trajectory::getUnitJointVelocity(std::vector<float> target) {
     return { shoulderUnitVelocity, elbowUnitVelocity };
 }
 
-std::vector<float> Trajectory::getStartPose(std::vector<float> target) {
-    float deltaD = 0.5;
+std::vector<float> Trajectory::getStartPose(std::vector<float> target, float deltaD) {
 
     std::vector<float> angleAndVelocity = getSpeedJOverhand(target);
     std::vector<float> jointVelocities = jacobianInverse2D(mThrowPose,{ -angleAndVelocity[1],0 });
