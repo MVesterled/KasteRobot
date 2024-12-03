@@ -28,6 +28,7 @@ double Trajectory::getCartesianVelocity(std::vector<double> target) {
 void Trajectory::buildQubicVelocityProfiles(std::vector<double> target, double rampUpTime, double velocityFactor) {
 
     mRampUpTime = rampUpTime;
+    mVelocityFactor = velocityFactor;
 
     std::vector<double> jointVelocities = getTargetJointSpeeds(target);
 
@@ -53,6 +54,7 @@ void Trajectory::buildQubicVelocityProfiles(std::vector<double> target, double r
 void Trajectory::buildLinearVelocityProfiles(std::vector<double> target, double rampUpTime, double velocityFactor) {
 
     mRampUpTime = rampUpTime;
+    mVelocityFactor = velocityFactor;
 
     std::vector<double> jointVelocities = getTargetJointSpeeds(target);
 
@@ -73,6 +75,9 @@ void Trajectory::buildLinearVelocityProfiles(std::vector<double> target, double 
 }
 
 std::vector<double> Trajectory::getQubicRampUpVelocity(double time, std::vector<double> unitVector, std::vector<double> targetJointVelocities) {
+
+    targetJointVelocities[0] = targetJointVelocities[0] * mVelocityFactor;
+    targetJointVelocities[1] = targetJointVelocities[1] * mVelocityFactor;
 
     if (time > mRampUpTime) {
         return targetJointVelocities;
@@ -95,6 +100,10 @@ std::vector<double> Trajectory::getQubicRampDownVelocity(double time, std::vecto
 }
 
 std::vector<double> Trajectory::getLinearRampUpVelocity(double time, std::vector<double> unitVector, std::vector<double> targetJointVelocities) {
+    
+    targetJointVelocities[0] = targetJointVelocities[0] * mVelocityFactor;
+    targetJointVelocities[1] = targetJointVelocities[1] * mVelocityFactor;
+
     if (time > mRampUpTime) {
         return targetJointVelocities;
     }

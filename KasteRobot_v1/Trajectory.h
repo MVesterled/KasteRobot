@@ -40,7 +40,7 @@ public:
 private:
 
     std::vector<double> mThrowPose;
-    double mTCPoffsetY, mStartHeight, mDeltaD, mRampUpTime;
+    double mTCPoffsetY, mStartHeight, mDeltaD, mRampUpTime, mVelocityFactor;
     double mQubicRampUpProfileA, mQubicRampUpProfileB, mQubicRampUpProfileC, mQubicRampDownProfileA, mQubicRampDownProfileB, mQubicRampDownProfileC;
     double mLinearRampUpProfileA, mLinearRampUpProfileB, mLinearRampDownProfileA, mLinearRampDownProfileB;
 };
