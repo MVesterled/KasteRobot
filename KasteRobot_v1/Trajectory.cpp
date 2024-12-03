@@ -76,10 +76,9 @@ void Trajectory::buildLinearVelocityProfiles(std::vector<double> target, double 
 
 std::vector<double> Trajectory::getQubicRampUpVelocity(double time, std::vector<double> unitVector, std::vector<double> targetJointVelocities) {
 
-    targetJointVelocities[0] = targetJointVelocities[0] * mVelocityFactor;
-    targetJointVelocities[1] = targetJointVelocities[1] * mVelocityFactor;
-
     if (time > mRampUpTime) {
+        targetJointVelocities[0] = targetJointVelocities[0] * mVelocityFactor;
+        targetJointVelocities[1] = targetJointVelocities[1] * mVelocityFactor;
         return targetJointVelocities;
     }
 
@@ -101,10 +100,9 @@ std::vector<double> Trajectory::getQubicRampDownVelocity(double time, std::vecto
 
 std::vector<double> Trajectory::getLinearRampUpVelocity(double time, std::vector<double> unitVector, std::vector<double> targetJointVelocities) {
     
-    targetJointVelocities[0] = targetJointVelocities[0] * mVelocityFactor;
-    targetJointVelocities[1] = targetJointVelocities[1] * mVelocityFactor;
-
     if (time > mRampUpTime) {
+        targetJointVelocities[0] = targetJointVelocities[0] * mVelocityFactor;
+        targetJointVelocities[1] = targetJointVelocities[1] * mVelocityFactor;
         return targetJointVelocities;
     }
 
