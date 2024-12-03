@@ -42,32 +42,74 @@ void Trajectory::buildQubicVelocityProfiles(std::vector<double> target, double r
 
     std::vector<double> profile = parabel3punkter(punkt1, punkt2, punkt3);
 
-    mRampUpProfileA = profile[0];
-    mRampUpProfileB = profile[1];
-    mRampUpProfileC = 0;
-    mRampDownProfileA = profile[0];
-    mRampDownProfileB = 0;
-    mRampDownProfileC = throwVelocityJoints;
+    mQubicRampUpProfileA = profile[0];
+    mQubicRampUpProfileB = profile[1];
+    mQubicRampUpProfileC = 0;
+    mQubicRampDownProfileA = profile[0];
+    mQubicRampDownProfileB = 0;
+    mQubicRampDownProfileC = throwVelocityJoints;
 }
 
-std::vector<double> Trajectory::getRampUpVelocity(double time, std::vector<double> unitVector, std::vector<double> targetJointVelocities) {
+void Trajectory::buildLinearVelocityProfiles(std::vector<double> target, double rampUpTime, double velocityFactor) {
+
+    mRampUpTime = rampUpTime;
+
+    std::vector<double> jointVelocities = getTargetJointSpeeds(target);
+
+    double shoulderJointVelocity = jointVelocities[0];
+    double elbowJointVelocity = jointVelocities[1];
+
+    double throwVelocityJoints = velocityFactor * std::sqrt(shoulderJointVelocity * shoulderJointVelocity + elbowJointVelocity * elbowJointVelocity);
+
+    std::pair<double, double> punkt1 = std::make_pair(0.0, 0.0);
+    std::pair<double, double> punkt2 = std::make_pair(rampUpTime, throwVelocityJoints);
+
+    std::vector<double> profile = linear2punkter(punkt1, punkt2);
+
+    mLinearRampUpProfileA = profile[0];
+    mLinearRampUpProfileB = 0;
+    mQubicRampDownProfileA = -profile[0];
+    mQubicRampDownProfileB = rampUpTime;
+}
+
+std::vector<double> Trajectory::getQubicRampUpVelocity(double time, std::vector<double> unitVector, std::vector<double> targetJointVelocities) {
 
     if (time > mRampUpTime) {
         return targetJointVelocities;
     }
 
-    double velocityMagnitude = mRampUpProfileA * time * time + mRampUpProfileB * time + mRampUpProfileC;
+    double velocityMagnitude = mQubicRampUpProfileA * time * time + mQubicRampUpProfileB * time + mQubicRampUpProfileC;
 
     return { velocityMagnitude * unitVector[0], velocityMagnitude * unitVector[1] };
 }
 
-std::vector<double> Trajectory::getRampDownVelocity(double time, std::vector<double> unitVector) {
+std::vector<double> Trajectory::getQubicRampDownVelocity(double time, std::vector<double> unitVector) {
 
     if (time > mRampUpTime) {
         return { 0,0 };
     }
 
-    double velocityMagnitude = mRampDownProfileA * time * time + mRampDownProfileB * time + mRampDownProfileC;
+    double velocityMagnitude = mQubicRampDownProfileA * time * time + mQubicRampDownProfileB * time + mQubicRampDownProfileC;
+
+    return { velocityMagnitude * unitVector[0], velocityMagnitude * unitVector[1] };
+}
+
+std::vector<double> Trajectory::getLinearRampUpVelocity(double time, std::vector<double> unitVector, std::vector<double> targetJointVelocities) {
+    if (time > mRampUpTime) {
+        return targetJointVelocities;
+    }
+
+    double velocityMagnitude = mLinearRampUpProfileA * time + mLinearRampUpProfileB;
+
+    return { velocityMagnitude * unitVector[0], velocityMagnitude * unitVector[1] };
+}
+
+std::vector<double> Trajectory::getLinearRampDownVelocity(double time, std::vector<double> unitVector) {
+    if (time > mRampUpTime) {
+        return { 0,0 };
+    }
+
+    double velocityMagnitude = mLinearRampDownProfileA * time + mLinearRampDownProfileB;
 
     return { velocityMagnitude * unitVector[0], velocityMagnitude * unitVector[1] };
 }
@@ -255,7 +297,7 @@ std::vector<double> Trajectory::base2CornerTransformation(std::vector<double> pu
     return output;
 }
 
-//Parabel
+//grafer
 std::vector<double> Trajectory::parabel3punkter(std::pair<double, double> punkt1, std::pair<double, double> punkt2, std::pair<double, double> punkt3) {
     double x1 = punkt1.first;
     double x2 = punkt2.first;
@@ -271,4 +313,16 @@ std::vector<double> Trajectory::parabel3punkter(std::pair<double, double> punkt1
     double c = (x2 * x3 * (x2 - x3) * z1 + x3 * x1 * (x3 - x1) * z2 + x1 * x2 * (x1 - x2) * z3) / naevner;
 
     return{ a,b,c };
+}
+
+std::vector<double> Trajectory::linear2punkter(std::pair<double, double> punkt1, std::pair<double, double> punkt2) {
+    double x1 = punkt1.first;
+    double y1 = punkt1.second;
+    double x2 = punkt2.first;
+    double y2 = punkt2.second;
+
+    double a = (y2 - y2) / (x2 - x1);
+    double b = y1 - A * x1;
+
+    return { a,b };
 }
