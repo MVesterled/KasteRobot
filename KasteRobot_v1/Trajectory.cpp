@@ -70,8 +70,8 @@ void Trajectory::buildLinearVelocityProfiles(std::vector<double> target, double 
 
     mLinearRampUpProfileA = profile[0];
     mLinearRampUpProfileB = 0;
-    mQubicRampDownProfileA = -profile[0];
-    mQubicRampDownProfileB = rampUpTime;
+    mLinearRampDownProfileA = -profile[0];
+    mLinearRampDownProfileB = throwVelocityJoints;
 }
 
 std::vector<double> Trajectory::getQubicRampUpVelocity(double time, std::vector<double> unitVector, std::vector<double> targetJointVelocities) {

@@ -224,7 +224,7 @@ cv::Point2f Camera::nextPoint()
 {
     if (ballPoints.empty()) {
         std::cerr << "Error: No more points available in ballPoints" << std::endl;
-        return cv::Point2f(250, 250);
+        return cv::Point2f(200, 200);
     }
 
     cv::Point2f Temp = ballPoints[ballPoints.size()-1];

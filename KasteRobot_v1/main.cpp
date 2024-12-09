@@ -6,6 +6,7 @@
 #include <thread>
 #include <chrono>
 #include <cmath>
+#include <fstream>
 
 // project libraries
 #include <opencv2/opencv.hpp>
@@ -91,7 +92,7 @@ int main(int argc, char* argv[])
     //std::vector<double> to = {koordinates[3], koordinates[4], koordinates[5], 0.622, -3.065, 0.029};
 
     //Udregning af bold pos
-    std::vector<double> pickUp = cornerToFrame(ballPoint.x/1000, ballPoint.y/1000, -0.20);
+    std::vector<double> pickUp = cornerToFrame(ballPoint.x/1000, ballPoint.y/1000, -0.40);
     std::vector<double> pickUpDown = cornerToFrame(ballPoint.x/1000, ballPoint.y/1000, -0.155);
 
 
@@ -108,6 +109,7 @@ int main(int argc, char* argv[])
 
     RTDEControlInterface rtde_control(robot_ip, rtde_frequency, flags, ur_cap_port, rt_control_priority);
     RTDEReceiveInterface rtde_receive(robot_ip, rtde_frequency, {}, true, false, rt_receive_priority);
+    RTDEIOInterface  rtde_io(robot_ip);
 
     // Set application realtime priority
     RTDEUtility::setRealtimePriority(80);
@@ -140,43 +142,38 @@ int main(int argc, char* argv[])
     // Declared futher up
     // double rtde_frequency = 125.0; // Hz
     // double dt = 1.0 / rtde_frequency; // 8ms
-    double acceleration = 5;
+    double acceleration = 4;
     double throwTol = 0.04;
     double rampUpTime = 0.4;
     double deltaD = 0.5;
+    double factor = 1.13;
     std::vector<double> throwPose= {-1.19394 , -1.0508627 , -0.7332036732 , -0.51487 , M_PI/2, 0};
 
     Trajectory speedJThrow;
-    std::vector<double> tabelTarget = {0.5,0.1,0};
+                                       //X   Y      Z
+    std::vector<double> tabelTarget = {0.50,0.30,-0.125};
     std::vector<double> currentPose = {0,0,0,0,0,0};
 
-    speedJThrow.buildLinearVelocityProfiles(tabelTarget, rampUpTime, 1.0);
+    speedJThrow.buildLinearVelocityProfiles(tabelTarget, rampUpTime, factor);
 
     std::vector<double> startPose = speedJThrow.getStartPose(tabelTarget, deltaD);
-/*
-    rtde_control.speedJ({0.0, 0.0, -2.5, 0.0, 0.0, 0.0}, acceleration);
 
-    while(true){
-        std::cout << "Actual: " << rtde_receive.getActualQd()[2] << std::endl;
-        std::this_thread::sleep_for(std::chrono::milliseconds(100));
-    }
-*/
-  /*
     // Home gripper
     gripper.Home();
+    // Move to middle pose
+    rtde_control.moveJ({-1.152 , -1.972 , -1.251 , -1.476 , M_PI/2, 0}, 0.6, 0.6);
     // Pickup ball
     rtde_control.moveL(pickUp, 0.2, 0.2);
     rtde_control.moveL(pickUpDown, 0.2, 0.2);
     gripper.Grip(5, 36);
     rtde_control.moveL(pickUp, 0.2, 0.2);
-*/
 
     // Move to middle pose
-    rtde_control.moveJ({-1.152 , -1.972 , -1.251 , -1.476 , M_PI/2, 0}, 0.3, 0.3);
+    rtde_control.moveJ({-1.152 , -1.972 , -1.251 , -1.476 , M_PI/2, 0}, 0.6, 0.6);
     // Move to lineup pose
     rtde_control.moveJ(throwPose,  0.3, 0.3);
     // Move to pull back
-    rtde_control.moveJ({startPose[0], startPose[1], startPose[2], -0.51487, M_PI/2, 0}, 0.3, 0.3);
+    rtde_control.moveJ({startPose[0], startPose[1], startPose[2], -0.51487, M_PI/2, 0}, 0.6, 0.6);
 
     rtde_control.speedStop();
 
@@ -186,12 +183,127 @@ int main(int argc, char* argv[])
     std::vector<double> unitVector = speedJThrow.getUnitVector(tabelTarget);
     std::vector<double> targetJointSpeeds = speedJThrow.getTargetJointSpeeds(tabelTarget);
 
-    // Execute 125Hz control loop for 2 seconds, each cycle is ~8ms
 
-    for (unsigned int i=0; i<500; i++)
+    // Open CSV log file in append mode
+    std::ofstream logFile;
+    //logFile.open("logAcc" + std::to_string(acceleration) + ".csv", std::ios::app);
+    //logFile.open("logAccShoulder" + std::to_string(acceleration) + ".csv", std::ios::app);
+    //logFile.open("logAccElbow" + std::to_string(acceleration) + ".csv", std::ios::app);
+
+    /*
+    // Log both axis
+    if (logFile.tellp() == 0) {
+        logFile << "ShoulderSpeed,ShoulderAim,ElbowSpeed,ElbowAim,Time,SpeedScaling" << std::endl;
+    }
+    // Log Shoulder axis
+    if (logFile.tellp() == 0) {
+        logFile << "ShoulderSpeed,ShoulderAim,Time,SpeedScaling" << std::endl;
+    }
+    // Log EElbow axis
+    if (logFile.tellp() == 0) {
+        logFile << "ElbowSpeed,ElbowAim,Time,SpeedScaling" << std::endl;
+    }
+    */
+
+    // Rampup loop, first loop in series
+    // Execute 125Hz control loop for 2 seconds, each cycle is ~8ms
+    for (unsigned int i=0; i<140; i++)
     {
         steady_clock::time_point t_start = rtde_control.initPeriod();
         jointSpeedF = speedJThrow.getLinearRampUpVelocity(realTime, unitVector, targetJointSpeeds);
+
+        if(jointSpeedF[0] > 0 || jointSpeedF[1] > 0)
+            break;
+
+        rtde_io.setSpeedSlider(1);
+        rtde_control.speedJ(joint_speed, acceleration, dt);
+
+        joint_speed[1] = jointSpeedF[0];
+        joint_speed[2] = jointSpeedF[1];
+
+        /*
+        // Log data to CSV file
+        double shoulder = rtde_receive.getActualQd()[1];
+        double shoulderAim = joint_speed[1];
+        double elbow = rtde_receive.getActualQd()[2];
+        double elbowAim = joint_speed[2];
+        double time = realTime;
+        double speedScaling = rtde_receive.getSpeedScalingCombined();
+        //logFile << shoulder << "," << shoulderAim << "," << elbow << "," << elbowAim << "," << time << "," << speedScaling << std::endl;
+        //logFile << shoulder << "," << shoulderAim << "," << time << "," << speedScaling << std::endl;
+        //logFile << elbow << "," << elbowAim << "," << time << "," << speedScaling << std::endl;
+        */
+
+        std::cout << "---------------------" << std::endl;
+        std::cout << "Actual Shoulder: " << rtde_receive.getActualQd()[1] << " Aiming for speed: " <<joint_speed[1] << std::endl;
+        std::cout << "Actual Elbow: " << rtde_receive.getActualQd()[2] << " Aiming for speed: " <<joint_speed[2] << std::endl;
+        std::cout << "Time: " << realTime << std::endl;
+        std::cout << "Speed scaling: " << rtde_receive.getSpeedScaling() << std::endl;
+        std::cout << "Speed fraction: " << rtde_receive.getTargetSpeedFraction() << std::endl;
+        std::cout << "Speed scaling combined: " << rtde_receive.getSpeedScalingCombined() << std::endl;
+        std::cout << "---------------------" << std::endl;
+
+
+        if(rampUpTime < realTime){
+            std::cout << "Rampup time reached, Coasting to pos!" << std::endl;
+            break;
+        }
+
+        /*if(rtde_receive.getActualQd()[1] < -1.26 && rtde_receive.getActualQd()[2] < -0.59){
+            //rtde_receive.getActualQd()[1] < -1.26 && rtde_receive.getActualQd()[2] < -0.59
+            std::cout << "Speed reached, releaseing ball!" << std::endl;
+            break;
+        }*/
+
+
+        realTime += 0.008;
+        rtde_control.waitPeriod(t_start);
+    }
+
+    // Coasting loop, keep robot at speed until throwing position is inside tolerance
+    for (unsigned int i=0; i<140; i++)
+    {
+        steady_clock::time_point t_start = rtde_control.initPeriod();
+
+        jointSpeedF = speedJThrow.getLinearRampUpVelocity(realTime, unitVector, targetJointSpeeds);
+
+        if(jointSpeedF[0] > 0 || jointSpeedF[1] > 0)
+            break;
+
+        rtde_io.setSpeedSlider(1);
+        rtde_control.speedJ(joint_speed, acceleration, dt);
+
+        joint_speed[1] = jointSpeedF[0];
+        joint_speed[2] = jointSpeedF[1];
+
+        currentPose = rtde_receive.getActualQ();
+        std::cout << "---------------------" << std::endl;
+        std::cout << "Shoulder Current Pos: " << currentPose[1] <<" Releasing at: " << throwPose[1] << std::endl;
+        std::cout << "Elbow Current Pos: " << currentPose[2] <<" Releasing at: " << throwPose[2] << std::endl;
+        std::cout << "Time: " << realTime << std::endl;
+        std::cout << "---------------------" << std::endl;
+
+        if((abs(currentPose[1]) + throwTol > abs(throwPose[1])) && (abs(currentPose[2]) + throwTol > abs(throwPose[2]))){
+            std::cout << "Throwing pose reached, releasing ball!" << std::endl;
+            break;
+        }
+
+        realTime += 0.008;
+        rtde_control.waitPeriod(t_start);
+    }
+
+    std::thread releaseThread([&]() {
+        //std::this_thread::sleep_for(std::chrono::milliseconds(185)); // Adjust delay to release mid-way
+        gripper.Command("RELEASE(2, 420)");  // Trigger gripper release
+    });
+
+    // Reset realtime after coasting! Very important!
+    realTime = 0;
+    // Rampdown loop, slowly stop robot!
+    for (unsigned int i=0; i<140; i++)
+    {
+        steady_clock::time_point t_start = rtde_control.initPeriod();
+        jointSpeedF = speedJThrow.getLinearRampDownVelocity(realTime, unitVector);
 
         if(jointSpeedF[0] > 0 || jointSpeedF[1] > 0)
             break;
@@ -208,23 +320,15 @@ int main(int argc, char* argv[])
         std::cout << "Speed scaling: " << rtde_receive.getSpeedScalingCombined() << std::endl;
         std::cout << "---------------------" << std::endl;
 
-
-        if(rtde_receive.getActualQd()[1] < -1.26 && rtde_receive.getActualQd()[2] < -0.59){
-            //rtde_receive.getActualQd()[1] < -1.26 && rtde_receive.getActualQd()[2] < -0.59
-            std::cout << "NEEEEK BREAKING SHOULDER!" << std::endl;
+        if(rampUpTime < realTime){
+            std::cout << "Rampdown finished!" << std::endl;
             break;
         }
-        /*
-        if(rtde_receive.getActualQd()[2]< -1){
-            std::cout << "NEEEEK BREAKING ELBOW!" << std::endl;
-            break;
-        }
-        */
-
-        realTime += 0.008;
         rtde_control.waitPeriod(t_start);
+        realTime += 0.008;
     }
 
+    std::cout << "Stopping!" << std::endl;
     rtde_control.speedStop();
     rtde_control.stopScript();
 
