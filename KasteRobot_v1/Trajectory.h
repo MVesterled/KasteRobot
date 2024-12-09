@@ -10,31 +10,37 @@ public:
     Trajectory();
 
     //speedJ
-    void buildQubicVelocityProfiles(std::vector<float> target, float buildUpTime, float velocityFactor = 1.0);
-    std::vector<float> getStartPose(std::vector<float> target, float deltaD);
-    std::vector<float> getUnitVector(std::vector<float> target);
-    std::vector<float> getTargetJointSpeeds(std::vector<float> target);
-    float getCartesianVelocity(std::vector<float> target);
+    void buildQubicVelocityProfiles(std::vector<double> target, double rampUpTime, double velocityFactor = 1.0);
+    void buildLinearVelocityProfiles(std::vector<double> target, double rampUpTime, double velocityFactor = 1.0);
+    std::vector<double> getStartPose(std::vector<double> target, double deltaD);
+    std::vector<double> getUnitVector(std::vector<double> target);
+    std::vector<double> getTargetJointSpeeds(std::vector<double> target);
+    double getCartesianVelocity(std::vector<double> target);
+    double getTimeUntilRelease(std::vector<double> jointPositions, std::vector<double> jointVelocities);
 
-    std::vector<float> getRampUpVelocity(float time, std::vector<float> unitVector, std::vector<float> targetJointVelocities);
-    std::vector<float> getRampDownVelocity(float time, std::vector<float> unitVector);
-
-    //rotations and transformations
-    float findAngle(std::vector<float> punkt);
-    std::vector<float> rotateZ(float angle, std::vector<float> punkt);
-    std::vector<float> corner2BaseTransformation(std::vector<float> punkt);
-    std::vector<float> base2CornerTransformation(std::vector<float> punkt);
-
-    //parabel
-    std::vector<float> parabel3punkter(std::pair<float, float> punkt1, std::pair<float, float> punkt2, std::pair<float, float> punkt3);
+    std::vector<double> getQubicRampUpVelocity(double time, std::vector<double> unitVector, std::vector<double> targetJointVelocities);
+    std::vector<double> getQubicRampDownVelocity(double time, std::vector<double> unitVector);
+    std::vector<double> getLinearRampUpVelocity(double time, std::vector<double> unitVector, std::vector<double> targetJointVelocities);
+    std::vector<double> getLinearRampDownVelocity(double time, std::vector<double> unitVector);
 
     //jacobians
-    std::vector<float> jacobian2D(std::vector<float> angles, std::vector<float> jointVelocities);
-    std::vector<float> jacobianInverse2D(std::vector<float> angles, std::vector<float> cartesianVelocity);
+    std::vector<double> jacobian2D(std::vector<double> angles, std::vector<double> jointVelocities);
+    std::vector<double> jacobianInverse2D(std::vector<double> angles, std::vector<double> cartesianVelocity);
+
+    //rotations and transformations
+    double findAngle(std::vector<double> punkt);
+    std::vector<double> rotateZ(double angle, std::vector<double> punkt);
+    std::vector<double> corner2BaseTransformation(std::vector<double> punkt);
+    std::vector<double> base2CornerTransformation(std::vector<double> punkt);
+
+    //grafer
+    std::vector<double> parabel3punkter(std::pair<double, double> punkt1, std::pair<double, double> punkt2, std::pair<double, double> punkt3);
+    std::vector<double> linear2punkter(std::pair<double, double> punkt1, std::pair<double, double> punkt2);
 
 private:
 
-    std::vector<float> mThrowPose;
-    float mThrowBuildUp, mTCPoffsetY, mStartHeight, mDeltaD, mRampUpTime;
-    float mRampUpProfileA, mRampUpProfileB, mRampUpProfileC, mRampDownProfileA, mRampDownProfileB, mRampDownProfileC;
+    std::vector<double> mThrowPose;
+    double mTCPoffsetY, mStartHeight, mDeltaD, mRampUpTime, mVelocityFactor;
+    double mQubicRampUpProfileA, mQubicRampUpProfileB, mQubicRampUpProfileC, mQubicRampDownProfileA, mQubicRampDownProfileB, mQubicRampDownProfileC;
+    double mLinearRampUpProfileA, mLinearRampUpProfileB, mLinearRampDownProfileA, mLinearRampDownProfileB;
 };

@@ -1,179 +1,239 @@
 #include "Trajectory.h"
 
+//Constructor
 Trajectory::Trajectory() {
-    mThrowBuildUp = 0.2;
     mTCPoffsetY = -0.10915;
     mStartHeight = 1.1;
-    mRampUpProfileA = 0;
-    mRampUpProfileB = 0;
     mThrowPose = { -1.0509, -0.7332 };
 }
 
-float Trajectory::getCartesianVelocity(std::vector<float> target) {
+//SpeedJ funktioner
+double Trajectory::getCartesianVelocity(std::vector<double> target) {
 
-    float g = 9.8;
+    double g = 9.8;
 
-    std::vector<float> targetBase = corner2BaseTransformation(target);
-    float x = targetBase[0];
-    float y = targetBase[1];
-    float z = targetBase[2];
+    std::vector<double> targetBase = corner2BaseTransformation(target);
+    double x = targetBase[0];
+    double y = targetBase[1];
+    double z = targetBase[2];
 
     //udregner velocity
-    float hyp = std::sqrt(x * x + y * y);
-    float throwDistance = std::sqrt(x * x + y * y - mTCPoffsetY * mTCPoffsetY);
-    float velocity = std::sqrt((-g * throwDistance * throwDistance) / (2 * z - 2 * mStartHeight));
+    double hyp = std::sqrt(x * x + y * y);
+    double throwDistance = std::sqrt(x * x + y * y - mTCPoffsetY * mTCPoffsetY);
+    double velocity = std::sqrt((-g * throwDistance * throwDistance) / (2 * z - 2 * mStartHeight));
 
     return velocity;
 }
 
-void Trajectory::buildQubicVelocityProfiles(std::vector<float> target, float rampUpTime, float velocityFactor) {
+void Trajectory::buildQubicVelocityProfiles(std::vector<double> target, double rampUpTime, double velocityFactor) {
 
     mRampUpTime = rampUpTime;
+    mVelocityFactor = velocityFactor;
 
-    std::vector<float> jointVelocities = getTargetJointSpeeds(target);
+    std::vector<double> jointVelocities = getTargetJointSpeeds(target);
 
-    float shoulderJointVelocity = jointVelocities[0];
-    float elbowJointVelocity = jointVelocities[1];
+    double shoulderJointVelocity = jointVelocities[0];
+    double elbowJointVelocity = jointVelocities[1];
 
-    float throwVelocityJoints = velocityFactor * std::sqrt(shoulderJointVelocity * shoulderJointVelocity + elbowJointVelocity * elbowJointVelocity);
+    double throwVelocityJoints = velocityFactor * std::sqrt(shoulderJointVelocity * shoulderJointVelocity + elbowJointVelocity * elbowJointVelocity);
 
-    std::pair<float, float> punkt1 = std::make_pair(0.0, 0.0);
-    std::pair<float, float> punkt2 = std::make_pair(rampUpTime, throwVelocityJoints);
-    std::pair<float, float> punkt3 = std::make_pair(rampUpTime * 2, 0.0);
+    std::pair<double, double> punkt1 = std::make_pair(0.0, 0.0);
+    std::pair<double, double> punkt2 = std::make_pair(rampUpTime, throwVelocityJoints);
+    std::pair<double, double> punkt3 = std::make_pair(rampUpTime * 2, 0.0);
 
-    std::vector<float> profile = parabel3punkter(punkt1, punkt2, punkt3);
+    std::vector<double> profile = parabel3punkter(punkt1, punkt2, punkt3);
 
-    mRampUpProfileA = profile[0];
-    mRampUpProfileB = profile[1];
-    mRampUpProfileC = 0;
-    mRampDownProfileA = profile[0];
-    mRampDownProfileB = 0;
-    mRampDownProfileC = throwVelocityJoints;
+    mQubicRampUpProfileA = profile[0];
+    mQubicRampUpProfileB = profile[1];
+    mQubicRampUpProfileC = 0;
+    mQubicRampDownProfileA = profile[0];
+    mQubicRampDownProfileB = 0;
+    mQubicRampDownProfileC = throwVelocityJoints;
 }
 
-std::vector<float> Trajectory::getRampUpVelocity(float time, std::vector<float> unitVector, std::vector<float> targetJointVelocities) {
+void Trajectory::buildLinearVelocityProfiles(std::vector<double> target, double rampUpTime, double velocityFactor) {
+
+    mRampUpTime = rampUpTime;
+    mVelocityFactor = velocityFactor;
+
+    std::vector<double> jointVelocities = getTargetJointSpeeds(target);
+
+    double shoulderJointVelocity = jointVelocities[0];
+    double elbowJointVelocity = jointVelocities[1];
+
+    double throwVelocityJoints = velocityFactor * std::sqrt(shoulderJointVelocity * shoulderJointVelocity + elbowJointVelocity * elbowJointVelocity);
+
+    std::pair<double, double> punkt1 = std::make_pair(0.0, 0.0);
+    std::pair<double, double> punkt2 = std::make_pair(rampUpTime, throwVelocityJoints);
+
+    std::vector<double> profile = linear2punkter(punkt1, punkt2);
+
+    mLinearRampUpProfileA = profile[0];
+    mLinearRampUpProfileB = 0;
+    mQubicRampDownProfileA = -profile[0];
+    mQubicRampDownProfileB = rampUpTime;
+}
+
+std::vector<double> Trajectory::getQubicRampUpVelocity(double time, std::vector<double> unitVector, std::vector<double> targetJointVelocities) {
 
     if (time > mRampUpTime) {
-        return targetJointVelocities;
+        return { targetJointVelocities[0] * mVelocityFactor, targetJointVelocities[1] * mVelocityFactor };
     }
 
-    float velocityMagnitude = mRampUpProfileA * time * time + mRampUpProfileB * time + mRampUpProfileC;
+    double velocityMagnitude = mQubicRampUpProfileA * time * time + mQubicRampUpProfileB * time + mQubicRampUpProfileC;
 
     return { velocityMagnitude * unitVector[0], velocityMagnitude * unitVector[1] };
 }
 
-std::vector<float> Trajectory::getRampDownVelocity(float time, std::vector<float> unitVector) {
+std::vector<double> Trajectory::getQubicRampDownVelocity(double time, std::vector<double> unitVector) {
 
     if (time > mRampUpTime) {
         return { 0,0 };
     }
 
-    float velocityMagnitude = mRampDownProfileA * time * time + mRampDownProfileB * time + mRampDownProfileC;
+    double velocityMagnitude = mQubicRampDownProfileA * time * time + mQubicRampDownProfileB * time + mQubicRampDownProfileC;
 
     return { velocityMagnitude * unitVector[0], velocityMagnitude * unitVector[1] };
 }
 
-std::vector<float> Trajectory::getUnitVector(std::vector<float> target) {
+std::vector<double> Trajectory::getLinearRampUpVelocity(double time, std::vector<double> unitVector, std::vector<double> targetJointVelocities) {
 
-    std::vector<float> jointVelocities = getTargetJointSpeeds(target);
+    if (time > mRampUpTime) {
+        return { targetJointVelocities[0] * mVelocityFactor, targetJointVelocities[1] * mVelocityFactor };
+    }
 
-    float shoulderJointVelocity = jointVelocities[0];
-    float elbowJointVelocity = jointVelocities[1];
+    double velocityMagnitude = mLinearRampUpProfileA * time + mLinearRampUpProfileB;
 
-    float shoulderUnitVelocity = shoulderJointVelocity / std::sqrt(shoulderJointVelocity * shoulderJointVelocity + elbowJointVelocity * elbowJointVelocity);
-    float elbowUnitVelocity = elbowJointVelocity / std::sqrt(shoulderJointVelocity * shoulderJointVelocity + elbowJointVelocity * elbowJointVelocity);
+    return { velocityMagnitude * unitVector[0], velocityMagnitude * unitVector[1] };
+}
+
+std::vector<double> Trajectory::getLinearRampDownVelocity(double time, std::vector<double> unitVector) {
+    if (time > mRampUpTime) {
+        return { 0,0 };
+    }
+
+    double velocityMagnitude = mLinearRampDownProfileA * time + mLinearRampDownProfileB;
+
+    return { velocityMagnitude * unitVector[0], velocityMagnitude * unitVector[1] };
+}
+
+std::vector<double> Trajectory::getUnitVector(std::vector<double> target) {
+
+    std::vector<double> jointVelocities = getTargetJointSpeeds(target);
+
+    double shoulderJointVelocity = jointVelocities[0];
+    double elbowJointVelocity = jointVelocities[1];
+
+    double shoulderUnitVelocity = shoulderJointVelocity / std::sqrt(shoulderJointVelocity * shoulderJointVelocity + elbowJointVelocity * elbowJointVelocity);
+    double elbowUnitVelocity = elbowJointVelocity / std::sqrt(shoulderJointVelocity * shoulderJointVelocity + elbowJointVelocity * elbowJointVelocity);
 
     return { shoulderUnitVelocity, elbowUnitVelocity };
 }
 
-std::vector<float> Trajectory::getStartPose(std::vector<float> target, float deltaD) {
+std::vector<double> Trajectory::getStartPose(std::vector<double> target, double deltaD) {
 
     mDeltaD = deltaD;
 
-    float pi = 3.14159;
+    double pi = 3.14159;
 
     //transformere fra cornerframe til robotbaseframe
-    std::vector<float> targetBase = corner2BaseTransformation(target);
-    float x = targetBase[0];
-    float y = targetBase[1];
-    float z = targetBase[2];
+    std::vector<double> targetBase = corner2BaseTransformation(target);
+    double x = targetBase[0];
+    double y = targetBase[1];
+    double z = targetBase[2];
 
     //udregner base startpose
-    float hyp = std::sqrt(x * x + y * y);
-    float B_angle = std::acos(mTCPoffsetY / hyp);
-    float v_angle = std::atan2(y, x) + pi / 2;
-    float baseStartPose = -(pi - B_angle - v_angle);
+    double hyp = std::sqrt(x * x + y * y);
+    double B_angle = std::acos(mTCPoffsetY / hyp);
+    double v_angle = std::atan2(y, x) + pi / 2;
+    double baseStartPose = -(pi - B_angle - v_angle);
 
     //udregner shoulder og elbow startpose
-    std::vector<float> jointVelocities = getTargetJointSpeeds(target);
+    std::vector<double> jointVelocities = getTargetJointSpeeds(target);
 
-    float shoulderJointVelocity = jointVelocities[0];
-    float elbowJointVelocity = jointVelocities[1];
+    double shoulderJointVelocity = jointVelocities[0];
+    double elbowJointVelocity = jointVelocities[1];
 
-    float shoulderUnitVelocity = shoulderJointVelocity / std::sqrt(shoulderJointVelocity * shoulderJointVelocity + elbowJointVelocity * elbowJointVelocity);
-    float elbowUnitVelocity = elbowJointVelocity / std::sqrt(shoulderJointVelocity * shoulderJointVelocity + elbowJointVelocity * elbowJointVelocity);
+    double shoulderUnitVelocity = shoulderJointVelocity / std::sqrt(shoulderJointVelocity * shoulderJointVelocity + elbowJointVelocity * elbowJointVelocity);
+    double elbowUnitVelocity = elbowJointVelocity / std::sqrt(shoulderJointVelocity * shoulderJointVelocity + elbowJointVelocity * elbowJointVelocity);
 
-    float shoulderStartPose = mThrowPose[0] - shoulderUnitVelocity * deltaD;
-    float elbowStartPose = mThrowPose[1] - elbowUnitVelocity * deltaD;
+    double shoulderStartPose = mThrowPose[0] - shoulderUnitVelocity * deltaD;
+    double elbowStartPose = mThrowPose[1] - elbowUnitVelocity * deltaD;
 
     return { baseStartPose, shoulderStartPose, elbowStartPose };
 }
 
-std::vector<float> Trajectory::getTargetJointSpeeds(std::vector<float> target) {
-    float cartesianVelocity = getCartesianVelocity(target);
-    std::vector<float> jointVelocities = jacobianInverse2D(mThrowPose, { -cartesianVelocity,0 });
+std::vector<double> Trajectory::getTargetJointSpeeds(std::vector<double> target) {
+    double cartesianVelocity = getCartesianVelocity(target);
+    std::vector<double> jointVelocities = jacobianInverse2D(mThrowPose, { -cartesianVelocity,0 });
     return jointVelocities;
 }
 
+double Trajectory::getTimeUntilRelease(std::vector<double> jointPositions, std::vector<double> jointVelocities) {
+    double targetShoulderPosition = mThrowPose[0];
+    double targetElbowPosition = mThrowPose[1];
+    double actualShoulderPosition = jointPositions[0];
+    double actualElbowPosition = jointPositions[1];
+    double shoulderVelocity = jointVelocities[0];
+    double elbowVelocity = jointVelocities[1];
 
+    double shoulderDistance = std::abs(targetShoulderPosition - actualShoulderPosition);
+    double elbowDistance = std::abs(targetElbowPosition - actualElbowPosition);
 
+    double timeUntilReleaseShoulder = shoulderDistance / shoulderVelocity;
+    double timeUntilReleaseElbow = elbowDistance / elbowVelocity;
 
+    double timeUntilReleaseAverage = (timeUntilReleaseShoulder + timeUntilReleaseElbow) / 2;
 
-std::vector<float> Trajectory::jacobian2D(std::vector<float> angles, std::vector<float> jointVelocities) {
-    float q1 = angles[0];
-    float q2 = angles[1];
-    float qdot1 = jointVelocities[0];
-    float qdot2 = jointVelocities[1];
+    return timeUntilReleaseAverage;
+}
 
-    float l1 = 0.425;
-    float l2 = 0.675811;
+//Jacobians
+std::vector<double> Trajectory::jacobian2D(std::vector<double> angles, std::vector<double> jointVelocities) {
+    double q1 = angles[0];
+    double q2 = angles[1];
+    double qdot1 = jointVelocities[0];
+    double qdot2 = jointVelocities[1];
 
-    float j11 = -l1 * std::sin(q1) - l2 * std::sin(q1 + q2);
-    float j12 = -l2 * std::sin(q1 + q2);
-    float j21 = l1 * std::cos(q1) + l2 * std::cos(q1 + q2);
-    float j22 = l2 * std::cos(q1 + q2);
+    double l1 = 0.425;
+    double l2 = 0.675811;
 
-    float velocityX = j11 * qdot1 + j12 * qdot2;
-    float velocityY = j21 * qdot1 + j22 * qdot2;
+    double j11 = -l1 * std::sin(q1) - l2 * std::sin(q1 + q2);
+    double j12 = -l2 * std::sin(q1 + q2);
+    double j21 = l1 * std::cos(q1) + l2 * std::cos(q1 + q2);
+    double j22 = l2 * std::cos(q1 + q2);
+
+    double velocityX = j11 * qdot1 + j12 * qdot2;
+    double velocityY = j21 * qdot1 + j22 * qdot2;
 
     std::cout << "x: " << velocityX << " y: " << velocityY << std::endl;
 
     return { velocityX, velocityY };
 }
 
-std::vector<float> Trajectory::jacobianInverse2D(std::vector<float> angles, std::vector<float> cartesianVelocity) {
-    float q1 = angles[0];
-    float q2 = angles[1];
-    float vX = cartesianVelocity[0];
-    float vY = cartesianVelocity[1];
+std::vector<double> Trajectory::jacobianInverse2D(std::vector<double> angles, std::vector<double> cartesianVelocity) {
+    double q1 = angles[0];
+    double q2 = angles[1];
+    double vX = cartesianVelocity[0];
+    double vY = cartesianVelocity[1];
 
-    float l1 = 0.425;
-    float l2 = 0.675811;
+    double l1 = 0.425;
+    double l2 = 0.675811;
 
-    float j11 = -l1 * std::sin(q1) - l2 * std::sin(q1 + q2);
-    float j12 = -l2 * std::sin(q1 + q2);
-    float j21 = l1 * std::cos(q1) + l2 * std::cos(q1 + q2);
-    float j22 = l2 * std::cos(q1 + q2);
+    double j11 = -l1 * std::sin(q1) - l2 * std::sin(q1 + q2);
+    double j12 = -l2 * std::sin(q1 + q2);
+    double j21 = l1 * std::cos(q1) + l2 * std::cos(q1 + q2);
+    double j22 = l2 * std::cos(q1 + q2);
 
-    float determinant = j11 * j22 - j12 * j21;
+    double determinant = j11 * j22 - j12 * j21;
 
-    float invj11 = j22 / determinant;
-    float invj12 = -j12 / determinant;
-    float invj21 = -j21 / determinant;
-    float invj22 = j11 / determinant;
+    double invj11 = j22 / determinant;
+    double invj12 = -j12 / determinant;
+    double invj21 = -j21 / determinant;
+    double invj22 = j11 / determinant;
 
-    float joint1Velocity = invj11 * vX + invj12 * vY;
-    float joint2Velocity = invj21 * vX + invj22 * vY;
+    double joint1Velocity = invj11 * vX + invj12 * vY;
+    double joint2Velocity = invj21 * vX + invj22 * vY;
 
     std::cout << "joint 1: " << joint1Velocity << " joint 2: " << joint2Velocity << " determinant: " << determinant << std::endl;
 
@@ -185,21 +245,22 @@ std::vector<float> Trajectory::jacobianInverse2D(std::vector<float> angles, std:
     return { joint1Velocity, joint2Velocity };
 }
 
-float Trajectory::findAngle(std::vector<float> punkt) {
-    float x = punkt[0];
-    float y = punkt[1];
+//Rotations and transformations
+double Trajectory::findAngle(std::vector<double> punkt) {
+    double x = punkt[0];
+    double y = punkt[1];
 
-    float angle = std::atan(y / x);
+    double angle = std::atan(y / x);
 
     return angle;
 }
 
-std::vector<float> Trajectory::rotateZ(float angle, std::vector<float> punkt) {
-    float x = punkt[0];
-    float y = punkt[1];
-    float z = punkt[2];
+std::vector<double> Trajectory::rotateZ(double angle, std::vector<double> punkt) {
+    double x = punkt[0];
+    double y = punkt[1];
+    double z = punkt[2];
 
-    std::vector<float> output;
+    std::vector<double> output;
     output.resize(3);
 
     output[0] = std::cos(angle) * x - std::sin(angle) * y;
@@ -209,12 +270,12 @@ std::vector<float> Trajectory::rotateZ(float angle, std::vector<float> punkt) {
     return output;
 }
 
-std::vector<float> Trajectory::corner2BaseTransformation(std::vector<float> punkt) {
-    float x = punkt[0];
-    float y = punkt[1];
-    float z = punkt[2];
+std::vector<double> Trajectory::corner2BaseTransformation(std::vector<double> punkt) {
+    double x = punkt[0];
+    double y = punkt[1];
+    double z = punkt[2];
 
-    std::vector<float> output;
+    std::vector<double> output;
     output.resize(3);
 
     output[0] = -0.923 * x - 0.3849 * y + 0.7031903;
@@ -224,12 +285,12 @@ std::vector<float> Trajectory::corner2BaseTransformation(std::vector<float> punk
     return output;
 }
 
-std::vector<float> Trajectory::base2CornerTransformation(std::vector<float> punkt) {
-    float x = punkt[0];
-    float y = punkt[1];
-    float z = punkt[2];
+std::vector<double> Trajectory::base2CornerTransformation(std::vector<double> punkt) {
+    double x = punkt[0];
+    double y = punkt[1];
+    double z = punkt[2];
 
-    std::vector<float> output;
+    std::vector<double> output;
     output.resize(3);
 
     output[0] = -0.923 * x - 0.3849 * y + 0.3757709;
@@ -239,19 +300,33 @@ std::vector<float> Trajectory::base2CornerTransformation(std::vector<float> punk
     return output;
 }
 
-std::vector<float> Trajectory::parabel3punkter(std::pair<float, float> punkt1, std::pair<float, float> punkt2, std::pair<float, float> punkt3) {
-    float x1 = punkt1.first;
-    float x2 = punkt2.first;
-    float x3 = punkt3.first;
-    float z1 = punkt1.second;
-    float z2 = punkt2.second;
-    float z3 = punkt3.second;
+//grafer
+std::vector<double> Trajectory::parabel3punkter(std::pair<double, double> punkt1, std::pair<double, double> punkt2, std::pair<double, double> punkt3) {
+    double x1 = punkt1.first;
+    double x2 = punkt2.first;
+    double x3 = punkt3.first;
+    double z1 = punkt1.second;
+    double z2 = punkt2.second;
+    double z3 = punkt3.second;
 
-    float naevner = (x1 - x2) * (x1 - x3) * (x2 - x3);
+    double naevner = (x1 - x2) * (x1 - x3) * (x2 - x3);
 
-    float a = (x3 * (z2 - z1) + x2 * (z1 - z3) + x1 * (z3 - z2)) / naevner;
-    float b = (x3 * x3 * (z1 - z2) + x2 * x2 * (z3 - z1) + x1 * x1 * (z2 - z3)) / naevner;
-    float c = (x2 * x3 * (x2 - x3) * z1 + x3 * x1 * (x3 - x1) * z2 + x1 * x2 * (x1 - x2) * z3) / naevner;
+    double a = (x3 * (z2 - z1) + x2 * (z1 - z3) + x1 * (z3 - z2)) / naevner;
+    double b = (x3 * x3 * (z1 - z2) + x2 * x2 * (z3 - z1) + x1 * x1 * (z2 - z3)) / naevner;
+    double c = (x2 * x3 * (x2 - x3) * z1 + x3 * x1 * (x3 - x1) * z2 + x1 * x2 * (x1 - x2) * z3) / naevner;
 
     return{ a,b,c };
+}
+
+std::vector<double> Trajectory::linear2punkter(std::pair<double, double> punkt1, std::pair<double, double> punkt2) {
+    double x1 = punkt1.first;
+    double y1 = punkt1.second;
+    double x2 = punkt2.first;
+    double y2 = punkt2.second;
+
+    double a = (y2 - y1) / (x2 - x1);
+
+    double b = y1 - a * x1;
+
+    return { a,b };
 }

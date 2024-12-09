@@ -83,7 +83,7 @@ int main(int argc, char* argv[])
     //Udregning til kørselsmønster / kast for robot
     Trajectory linaryThrow;
     //Point where ball is
-    std::vector<float> target =  {600.0/1000.0, 200.0/1000.0, -0.1};
+    std::vector<double> target =  {600.0/1000.0, 200.0/1000.0, -0.1};
     //Findes koordinates in base fram from robot
     //std::vector<float> koordinates = linaryThrow.(target);
     //robot points
@@ -140,19 +140,19 @@ int main(int argc, char* argv[])
     // Declared futher up
     // double rtde_frequency = 125.0; // Hz
     // double dt = 1.0 / rtde_frequency; // 8ms
-    double acceleration = 15;
+    double acceleration = 5;
     double throwTol = 0.04;
-    float rampUpTime = 0.6;
-    float deltaD = 0.5;
+    double rampUpTime = 0.4;
+    double deltaD = 0.5;
     std::vector<double> throwPose= {-1.19394 , -1.0508627 , -0.7332036732 , -0.51487 , M_PI/2, 0};
 
     Trajectory speedJThrow;
-    std::vector<float> tabelTarget = {0.5,0.1,0};
+    std::vector<double> tabelTarget = {0.5,0.1,0};
     std::vector<double> currentPose = {0,0,0,0,0,0};
 
-    speedJThrow.buildQubicVelocityProfiles(tabelTarget, rampUpTime, 1.3);
+    speedJThrow.buildLinearVelocityProfiles(tabelTarget, rampUpTime, 1.0);
 
-    std::vector<float> startPose = speedJThrow.getStartPose(tabelTarget, deltaD);
+    std::vector<double> startPose = speedJThrow.getStartPose(tabelTarget, deltaD);
 /*
     rtde_control.speedJ({0.0, 0.0, -2.5, 0.0, 0.0, 0.0}, acceleration);
 
@@ -182,34 +182,44 @@ int main(int argc, char* argv[])
 
     float realTime = 0;
     std::vector<double> joint_speed = {0.0, 0.0, 0.0, 0.0, 0.0, 0.0};
-    std::vector<float> jointSpeedF = {0,0};
-    std::vector<float> unitVector = speedJThrow.getUnitVector(tabelTarget);
-    std::vector<float> targetJointSpeeds = speedJThrow.getTargetJointSpeeds(tabelTarget);
+    std::vector<double> jointSpeedF = {0,0};
+    std::vector<double> unitVector = speedJThrow.getUnitVector(tabelTarget);
+    std::vector<double> targetJointSpeeds = speedJThrow.getTargetJointSpeeds(tabelTarget);
 
     // Execute 125Hz control loop for 2 seconds, each cycle is ~8ms
 
-    for (unsigned int i=0; i<250; i++)
+    for (unsigned int i=0; i<500; i++)
     {
         steady_clock::time_point t_start = rtde_control.initPeriod();
-        jointSpeedF = speedJThrow.getRampUpVelocity(realTime, unitVector, targetJointSpeeds);
-        //jointSpeedF[0]
+        jointSpeedF = speedJThrow.getLinearRampUpVelocity(realTime, unitVector, targetJointSpeeds);
+
+        if(jointSpeedF[0] > 0 || jointSpeedF[1] > 0)
+            break;
+
         rtde_control.speedJ(joint_speed, acceleration, dt);
-        joint_speed[1] = 0;
+
+        joint_speed[1] = jointSpeedF[0];
         joint_speed[2] = jointSpeedF[1];
 
+        std::cout << "---------------------" << std::endl;
         std::cout << "Actual Shoulder: " << rtde_receive.getActualQd()[1] << " Aiming for speed: " <<joint_speed[1] << std::endl;
         std::cout << "Actual Elbow: " << rtde_receive.getActualQd()[2] << " Aiming for speed: " <<joint_speed[2] << std::endl;
+        std::cout << "Time: " << realTime << std::endl;
+        std::cout << "Speed scaling: " << rtde_receive.getSpeedScalingCombined() << std::endl;
+        std::cout << "---------------------" << std::endl;
 
-        if(rtde_receive.getActualQd()[1]< -1){
+
+        if(rtde_receive.getActualQd()[1] < -1.26 && rtde_receive.getActualQd()[2] < -0.59){
+            //rtde_receive.getActualQd()[1] < -1.26 && rtde_receive.getActualQd()[2] < -0.59
             std::cout << "NEEEEK BREAKING SHOULDER!" << std::endl;
             break;
         }
-
+        /*
         if(rtde_receive.getActualQd()[2]< -1){
             std::cout << "NEEEEK BREAKING ELBOW!" << std::endl;
             break;
         }
-
+        */
 
         realTime += 0.008;
         rtde_control.waitPeriod(t_start);
@@ -427,4 +437,5 @@ int main(int argc, char* argv[])
         z++;
         }
         */
+    return 0;
 }
