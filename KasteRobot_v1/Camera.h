@@ -33,7 +33,9 @@ public:
 
     //function to return the center of balls
     void ballDetect(std::string color);
+    void cupDetect(std::string color);
     cv::Point2f nextPoint();
+    cv::Point2f nextCup();
 
     //finds the balls with coulerr
     void detectGreen();
@@ -56,6 +58,7 @@ private:
     std::vector<cv::Point2f> mImagePoints;
     std::vector<cv::Point2f> mRealWorldPoints;
     std::vector<cv::Point2f> ballPoints;
+    std::vector<cv::Point2f> cupPoints;
     cv::Mat greenBallPicture;
     cv::Mat redBallPicture;
     cv::Mat blueBallPicture;

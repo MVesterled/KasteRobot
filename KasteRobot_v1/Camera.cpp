@@ -186,20 +186,45 @@ void Camera::ballDetect(std::string color){
     else if (color == "green"){
         src_grey = 255*greenBallPicture;;
     }
-    //imshow("255*", src_grey);
-    //cv::waitKey();
 
     //Apply a median filter to reduce noise, with a medium sized kernel  5
     cv::medianBlur(src_grey, src_grey, 5);
 
-    cv::Mat edges;
     cv::Canny(src_grey, src_grey, 50, 150);
+
+
+
+    // Threshold the image to binary
+    cv::Mat binaryImage;
+    cv::threshold(src_grey, binaryImage, 127, 255, cv::THRESH_BINARY | cv::THRESH_OTSU);
+
+    // Create a structuring element (kernel)
+    int kernelSize = 15; // Adjust kernel size depending on the image
+    cv::Mat kernel = cv::getStructuringElement(cv::MORPH_ELLIPSE, cv::Size(kernelSize, kernelSize));
+
+    // Apply morphological closing
+    cv::Mat closedImage;
+    cv::morphologyEx(binaryImage, closedImage, cv::MORPH_CLOSE, kernel);
+
+    // Find contours
+    std::vector<std::vector<cv::Point>> contours;
+    cv::findContours(closedImage, contours, cv::RETR_EXTERNAL, cv::CHAIN_APPROX_SIMPLE);
+
+    // Fill the contours
+    for (size_t i = 0; i < contours.size(); i++) {
+        cv::drawContours(closedImage, contours, static_cast<int>(i), cv::Scalar(255), cv::FILLED);
+    }
+
+    // Save and display the result
+    //cv::imwrite("fixed_image.png", closedImage);
+    //cv::imshow("Fixed Image", closedImage);
+    //cv::waitKey(0);
 
     //create a vec to store the circles, each circle is represented by 3 values: x,y,radius
     std::vector<cv::Vec3f> circles;
-    cv::HoughCircles(src_grey, circles, cv::HOUGH_GRADIENT, 1,
-                     src_grey.rows/8,  // change this value to detect circles with different distances to each other
-                     50, 15, 10, 30); // change the last two parameters (min radius and max radius)
+    cv::HoughCircles(closedImage, circles, cv::HOUGH_GRADIENT, 1,
+                     closedImage.rows/8,  // change this value to detect circles with different distances to each other
+                     50, 15, 10, 30); // change the last two parameters (min radius and max radius) (10-30 balls)
 
     //vizulice  circles
     for( size_t i = 0; i < circles.size(); i++ ) //loop through the detected circles and draw them on the original image
@@ -215,8 +240,8 @@ void Camera::ballDetect(std::string color){
         ballPoints.emplace_back(cv::Point2f(c[0], c[1]));
     }
 
-    //imshow("detected circles", mPicture);
-    //cv::waitKey();
+    imshow("detected circles", mPicture);
+    cv::waitKey();
 
     if (ballPoints.size() > 0){
         std::cout << "Balls detected" << std::endl; }
@@ -224,6 +249,78 @@ void Camera::ballDetect(std::string color){
         std::cout << "No balls detected" << std::endl; }
 
 }
+
+    void Camera::cupDetect(std::string color){
+
+    cv::Mat src_grey;
+    //loads in image as grayscale (Because of binary)
+    if (color == "red"){
+        src_grey = 255*redBallPicture;;
+    }
+    else if (color == "green"){
+        src_grey = 255*greenBallPicture;;
+    }
+
+    //Apply a median filter to reduce noise, with a medium sized kernel  5
+    cv::medianBlur(src_grey, src_grey, 5);
+    cv::Canny(src_grey, src_grey, 50, 150);
+
+    // Threshold the image to binary
+    cv::Mat binaryImage;
+    cv::threshold(src_grey, binaryImage, 127, 255, cv::THRESH_BINARY | cv::THRESH_OTSU);
+
+    // Create a structuring element (kernel)
+    int kernelSize = 15; // Adjust kernel size depending on the image
+    cv::Mat kernel = cv::getStructuringElement(cv::MORPH_ELLIPSE, cv::Size(kernelSize, kernelSize));
+
+    // Apply morphological closing
+    cv::Mat closedImage;
+    cv::morphologyEx(binaryImage, closedImage, cv::MORPH_CLOSE, kernel);
+
+    // Find contours
+    std::vector<std::vector<cv::Point>> contours;
+    cv::findContours(closedImage, contours, cv::RETR_EXTERNAL, cv::CHAIN_APPROX_SIMPLE);
+
+    // Fill the contours
+    for (size_t i = 0; i < contours.size(); i++) {
+        cv::drawContours(closedImage, contours, static_cast<int>(i), cv::Scalar(255), cv::FILLED);
+    }
+
+    // Save and display the result
+    //cv::imwrite("fixed_image.png", closedImage);
+    //cv::imshow("Fixed Image", closedImage);
+    //cv::waitKey(0);
+
+    //create a vec to store the circles, each circle is represented by 3 values: x,y,radius
+    std::vector<cv::Vec3f> circles;
+    cv::HoughCircles(closedImage, circles, cv::HOUGH_GRADIENT, 1,
+                     closedImage.rows/8,  // change this value to detect circles with different distances to each other
+                     50, 15, 45, 90); // change the last two parameters (min radius and max radius) (10-30 balls)
+
+    //vizulice  circles
+    for( size_t i = 0; i < circles.size(); i++ ) //loop through the detected circles and draw them on the original image
+    {
+        cv::Vec3i c = circles[i]; //get the ith  circle (x,y,r)
+        cv::Point2f center = cv::Point2f(c[0], c[1]); // circle center
+        //draw the cicrle center as a small dot
+        cv::circle( mPicture, center, 1, cv::Scalar(0,100,100), 3, cv::LINE_AA); //draw a small circle in the center with colour (0,100,1)
+        //draw the circle outline with the rr of the detected circle
+        int radius = c[2];//get the radius of the ith circle
+        circle( mPicture, center, radius, cv::Scalar(255,0,255), 3, cv::LINE_AA); //draw the circles perimeter with colour (255,0,255)
+        //std::cout<< center.x << ", "<< center.y << std::endl;
+        cupPoints.emplace_back(cv::Point2f(c[0], c[1]));
+    }
+
+    imshow("detected circles", mPicture);
+    cv::waitKey();
+
+    if (cupPoints.size() > 0){
+        std::cout << "Balls detected" << std::endl; }
+    else{
+        std::cout << "No balls detected" << std::endl; }
+
+
+    }
 
 cv::Point2f Camera::nextPoint()
 {
@@ -234,6 +331,20 @@ cv::Point2f Camera::nextPoint()
 
     cv::Point2f Temp = ballPoints[ballPoints.size()-1];
     ballPoints.pop_back();
+
+    return Temp;
+
+}
+
+cv::Point2f Camera::nextCup()
+{
+    if (cupPoints.empty()) {
+        std::cerr << "Error: No more points available in cupPoints" << std::endl;
+        return cv::Point2f(200, 200);
+    }
+
+    cv::Point2f Temp = cupPoints[cupPoints.size()-1];
+    cupPoints.pop_back();
 
     return Temp;
 
@@ -662,14 +773,14 @@ void Camera::capturePicture()
 
             std::cout << "Image captured successfully!" << std::endl;
             //change to own path (saves picture)
-            //cv::imwrite("/home/matmat1000/Documents/ballTestNewX2.jpg", undistortedImage);
+            //cv::imwrite("/home/matmat1000/Documents/ballTestNeekKally.jpg", undistortedImage);
             mPicture = undistortedImage.clone();
             // Create an OpenCV display window
 
             // cv::namedWindow( "Captured Image unDist", cv::WINDOW_NORMAL); // other options: CV_AUTOSIZE, CV_FREERATIO
             // cv::resizeWindow("Captured Image unDist", 900, 600); // Resize window to specific size
             // cv::imshow("Captured Image unDist", undistortedImage);
-            // cv::waitKey(0);  // Wait for a key press
+            //cv::waitKey(0);  // Wait for a key press
 
         }
         else

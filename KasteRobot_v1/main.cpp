@@ -28,25 +28,6 @@
 using namespace ur_rtde;
 using namespace std::chrono;
 
-//Function for multiplying matrices - temp location
-void mulMat(float mat1[4][4], float mat2[4][1], float result[4][1], int R1, int C1, int R2, int C2) {
-    // Check if matrix dimensions are compatible for multiplication
-    if (C1 != R2) {
-        std::cout << "Matrix multiplication not possible. Incompatible dimensions." << std::endl;
-        return;
-    }
-
-    // Matrix multiplication
-    for (int i = 0; i < R1; i++) {
-        for (int j = 0; j < C2; j++) {
-            result[i][j] = 0;
-            for (int k = 0; k < C1; k++) {
-                result[i][j] += mat1[i][k] * mat2[k][j];
-            }
-        }
-    }
-}
-
 std::vector<double> cornerToFrame(double x, double y, double z){
     std::vector<double> output = {0, 0, 0, 0, 0, 0};
     output[0] = -0.923 * x - 0.3849 * y + 0.7031903;
@@ -80,7 +61,7 @@ int main(int argc, char* argv[])
     RTDEUtility::setRealtimePriority(80);
 
     std::cout << "Robot Connection: " << rtde_receive.isConnected() << std::endl;
-    // ----------------------------------------- Robot connection and Setup parameters -----------------------------------------
+    // ----------------------------------------- End -----------------------------------------
 
     // ----------------------------------------- Calibration of camera test that also prints transformation matrix -----------------------------------------
     //When running on a new PC - change path in camera class.cpp (line: 5, 16, 418, 437)
@@ -91,15 +72,28 @@ int main(int argc, char* argv[])
     visionCam.capturePicture();
     //Warps the taken image before locating object for more precision
     visionCam.transformPicture();
-    //Finds center of balls in picture
+    //Finds colors in pictures and extracts to binary pictures
     visionCam.detectRed();
-    visionCam.ballDetect("red");
-    //Finds center of balls in picture
     visionCam.detectGreen();
+    //Finds center of balls and cups in picture
+    visionCam.ballDetect("red");
+    visionCam.cupDetect("red");
     visionCam.ballDetect("green");
+    visionCam.cupDetect("green");
+    /*
+    cv::Point2f ballPoint = visionCam.nextPoint();
+    std::cout << "Ball green located at: " << ballPoint.x << ", " << ballPoint.y << std::endl;
+    ballPoint = visionCam.nextPoint();
+    std::cout << "Ball red located at: " << ballPoint.x << ", " << ballPoint.y << std::endl;
+    cv::Point2f cupPoint = visionCam.nextCup();
+    std::cout << "Cup green located at: " << cupPoint.x << ", " << cupPoint.y << std::endl;
+    cupPoint = visionCam.nextCup();
+    std::cout << "Cup red located at: " << cupPoint.x << ", " << cupPoint.y << std::endl;
+*/
     //visionCam.centerOfMass();
 
-    // ----------------------------------------- Calibration of camera test that also prints transformation matrix -----------------------------------------
+
+    // ----------------------------------------- End -----------------------------------------
 
 
     // ----------------------------------------- Gripper connection and object handling  -----------------------------------------
@@ -148,11 +142,14 @@ int main(int argc, char* argv[])
     double accSpdMoveJ = 0.5;
     double accSpdMoveL = 0.2;
 
+    // Define cup height
+    double cupHeight = -0.115;
+
     // Define static pose
     std::vector<double> throwPose = {-1.19394 , -1.0508627 , -0.7332036732 , -0.51487 , M_PI/2, 0};
     std::vector<double> middlePose = {-1.152 , -1.972 , -1.251 , -1.476 , M_PI/2, 0};
-    //                                  X       Y     Z
-    std::vector<double> tabelTarget = {0.525,0.275,-0.115};
+
+    // Define empty current pose
     std::vector<double> currentPose = {0,0,0,0,0,0};
 
     // Make object of Trajectory
@@ -161,14 +158,19 @@ int main(int argc, char* argv[])
     // ----------------------------------------- End  -----------------------------------------
 
 
-
     // ----------------------------------------- For loop herfra -----------------------------------------
 
-    for (int j = 0; j < 2; ++j) {
+for (int j = 0; j < 2; ++j) {
 
     //Gets next point if any. If no balls left then -500, -500 is returned
     cv::Point2f ballPoint = visionCam.nextPoint();
     std::cout << "Ball is located at: " << ballPoint.x << ", " << ballPoint.y << std::endl;
+
+    cv::Point2f cupPoint = visionCam.nextCup();
+    std::cout << "Cup is located at: " << cupPoint.x << ", " << cupPoint.y << std::endl;
+
+    //Udregning af kop pos
+    std::vector<double> tabelTarget = {(cupPoint.x-10)/1000, cupPoint.y/1000, cupHeight};
 
     //Udregning af bold pos
     std::vector<double> pickUp = cornerToFrame(ballPoint.x/1000, ballPoint.y/1000, -0.40);
@@ -323,6 +325,8 @@ int main(int argc, char* argv[])
     rtde_control.stopScript();
 
     // ----------------------------------------- End  -----------------------------------------
+
+
 
     // Code for logging
     /*

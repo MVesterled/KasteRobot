@@ -200,15 +200,6 @@ bool Gripper::Command(QString command) {
     else{
         return 0;
     }
-
-
-    /* Step 7: Return 1 if both reponsed is receive, or 0 if not
-    if (ackReceived && finReceived) {
-        return 1;
-    }
-    else {
-        return 0;
-    }*/
 }
 
 // ---- Functions for General (For noobs) ----
