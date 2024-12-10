@@ -185,7 +185,7 @@ bool Gripper::Command(QString command) {
 
     // Step 4: Setup a timeout mechanism. Singleshot timer of 20 seconds
     timer.setSingleShot(true);
-    timer.start(20000);
+    timer.start(3000);
 
     // Step 5: Connect the timer timeout signal to quit the event loop
     connect(&timer, &QTimer::timeout, &loop, [&]() {

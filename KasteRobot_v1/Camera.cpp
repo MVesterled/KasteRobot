@@ -177,10 +177,15 @@ void Camera::transformPicture(){
 
 }
 
-void Camera::ballDetect(){
+void Camera::ballDetect(std::string color){
+    cv::Mat src_grey;
     //loads in image as grayscale (Because of binary)
-    cv::Mat src_grey = 255*greenBallPicture;;
-
+    if (color == "red"){
+        src_grey = 255*redBallPicture;;
+    }
+    else if (color == "green"){
+        src_grey = 255*greenBallPicture;;
+    }
     //imshow("255*", src_grey);
     //cv::waitKey();
 
@@ -193,8 +198,8 @@ void Camera::ballDetect(){
     //create a vec to store the circles, each circle is represented by 3 values: x,y,radius
     std::vector<cv::Vec3f> circles;
     cv::HoughCircles(src_grey, circles, cv::HOUGH_GRADIENT, 1,
-                 src_grey.rows/8,  // change this value to detect circles with different distances to each other
-                 50, 15, 10, 30); // change the last two parameters (min radius and max radius)
+                     src_grey.rows/8,  // change this value to detect circles with different distances to each other
+                     50, 15, 10, 30); // change the last two parameters (min radius and max radius)
 
     //vizulice  circles
     for( size_t i = 0; i < circles.size(); i++ ) //loop through the detected circles and draw them on the original image
@@ -260,8 +265,8 @@ void Camera::detectRed()
     //Initializes temporary images for computation:
     cv::Mat imgHSV;
     //HSV values for the green colour wanted:
-    int hmin = 0, smin = 152, vmin = 141;
-    int hmax = 20, smax = 255, vmax = 222;
+    int hmin = 0, smin = 190, vmin = 80;
+    int hmax = 22, smax = 255, vmax = 255;
     //Convertion to HSV-colourspace from RGB-colourspace:
     cv::cvtColor(mPicture, imgHSV, cv::COLOR_BGR2HSV);
 
@@ -657,15 +662,15 @@ void Camera::capturePicture()
 
             std::cout << "Image captured successfully!" << std::endl;
             //change to own path (saves picture)
-            //cv::imwrite("/home/matmat1000/Documents/ballTestNew.jpg", undistortedImage);
+            //cv::imwrite("/home/matmat1000/Documents/ballTestNewX2.jpg", undistortedImage);
             mPicture = undistortedImage.clone();
             // Create an OpenCV display window
-/*
-            cv::namedWindow( "Captured Image unDist", cv::WINDOW_NORMAL); // other options: CV_AUTOSIZE, CV_FREERATIO
-            cv::resizeWindow("Captured Image unDist", 900, 600); // Resize window to specific size
-            cv::imshow("Captured Image unDist", undistortedImage);
-            cv::waitKey(0);  // Wait for a key press
-*/
+
+            // cv::namedWindow( "Captured Image unDist", cv::WINDOW_NORMAL); // other options: CV_AUTOSIZE, CV_FREERATIO
+            // cv::resizeWindow("Captured Image unDist", 900, 600); // Resize window to specific size
+            // cv::imshow("Captured Image unDist", undistortedImage);
+            // cv::waitKey(0);  // Wait for a key press
+
         }
         else
         {

@@ -32,7 +32,7 @@ public:
     void transformPicture();
 
     //function to return the center of balls
-    void ballDetect();
+    void ballDetect(std::string color);
     cv::Point2f nextPoint();
 
     //finds the balls with coulerr
