@@ -150,7 +150,7 @@ for (int j = 0; j < 2; ++j) {
     std::cout << "Cup is located at: " << cupPoint.x << ", " << cupPoint.y << std::endl;
 
     // Calc target from cup coordinates
-    std::vector<double> tabelTarget = {(cupPoint.x-10)/1000, cupPoint.y/1000, cupHeight};
+    std::vector<double> tabelTarget = {(cupPoint.x)/1000, cupPoint.y/1000, cupHeight};
 
     // Calc points for pick up of next ball
     std::vector<double> pickUp = cornerToFrame(ballPoint.x/1000, ballPoint.y/1000, -0.40);
