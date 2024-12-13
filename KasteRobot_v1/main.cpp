@@ -95,7 +95,6 @@ int main(int argc, char* argv[])
 
     // ----------------------------------------- End -----------------------------------------
 
-
     // ----------------------------------------- Gripper connection and object handling  -----------------------------------------
 
     //Gripper connect
@@ -108,26 +107,6 @@ int main(int argc, char* argv[])
         std::cout << "Failed to connect to the server." << std::endl;
         return 1; // Exit if the connection was not successful
     }
-
-    /*
-    QCoreApplication app(argc, argv);
-
-    // Create a QThread instance
-    QThread *gripperThread = new QThread;
-
-    // Create a Gripper instance
-    Gripper *gripper = new Gripper;
-
-    // Move the Gripper instance to the thread
-    gripper->moveToThread(gripperThread);
-
-    // Connect thread signals for proper cleanup
-    QObject::connect(gripperThread, &QThread::finished, gripper, &QObject::deleteLater);
-    QObject::connect(&app, &QCoreApplication::aboutToQuit, gripperThread, &QThread::quit);
-
-    // Start the thread
-    gripperThread->start();
-    */
 
     // ----------------------------------------- End  -----------------------------------------
 
@@ -145,7 +124,7 @@ int main(int argc, char* argv[])
     // Define cup height
     double cupHeight = -0.115;
 
-    // Define static pose
+    // Define static poses
     std::vector<double> throwPose = {-1.19394 , -1.0508627 , -0.7332036732 , -0.51487 , M_PI/2, 0};
     std::vector<double> middlePose = {-1.152 , -1.972 , -1.251 , -1.476 , M_PI/2, 0};
 
@@ -158,26 +137,29 @@ int main(int argc, char* argv[])
     // ----------------------------------------- End  -----------------------------------------
 
 
-    // ----------------------------------------- For loop herfra -----------------------------------------
+    // ----------------------------------------- For loop for executing throwing -----------------------------------------
 
 for (int j = 0; j < 2; ++j) {
 
-    //Gets next point if any. If no balls left then -500, -500 is returned
+    // Gets next point if any. If no balls left then -500, -500 is returned
     cv::Point2f ballPoint = visionCam.nextPoint();
     std::cout << "Ball is located at: " << ballPoint.x << ", " << ballPoint.y << std::endl;
 
+    // Get the next cup
     cv::Point2f cupPoint = visionCam.nextCup();
     std::cout << "Cup is located at: " << cupPoint.x << ", " << cupPoint.y << std::endl;
 
-    //Udregning af kop pos
+    // Calc target from cup coordinates
     std::vector<double> tabelTarget = {(cupPoint.x-10)/1000, cupPoint.y/1000, cupHeight};
 
-    //Udregning af bold pos
+    // Calc points for pick up of next ball
     std::vector<double> pickUp = cornerToFrame(ballPoint.x/1000, ballPoint.y/1000, -0.40);
     std::vector<double> pickUpDown = cornerToFrame(ballPoint.x/1000, ballPoint.y/1000, -0.155);
 
+    // Build velocity profiles (Up / Down)
     speedJThrow.buildLinearVelocityProfiles(tabelTarget, rampUpTime, factor);
 
+    // Define startpose from target and deltaD
     std::vector<double> startPose = speedJThrow.getStartPose(tabelTarget, deltaD);
 
     // Home gripper
@@ -216,15 +198,21 @@ for (int j = 0; j < 2; ++j) {
     for (unsigned int i=0; i<140; i++)
     {
         steady_clock::time_point t_start = rtde_control.initPeriod();
+
+        //Get the current volcities for the current realtime
         jointSpeedF = speedJThrow.getLinearRampUpVelocity(realTime, unitVector, targetJointSpeeds);
 
         // Safety check, if speed are positive, robot is moving in wrong direction!
         if(jointSpeedF[0] > 0 || jointSpeedF[1] > 0)
             break;
 
+        // Try to force speed slider to 1
         rtde_io.setSpeedSlider(1);
+
+        // Send speedJ command
         rtde_control.speedJ(joint_speed, acceleration, dt);
 
+        // Set joint speeds
         joint_speed[1] = jointSpeedF[0];
         joint_speed[2] = jointSpeedF[1];
 
@@ -235,11 +223,13 @@ for (int j = 0; j < 2; ++j) {
         std::cout << "Speed scaling: " << rtde_receive.getSpeedScaling() << std::endl;
         std::cout << "---------------------" << std::endl;
 
+        // When rampUpTime finished, exit loop
         if(rampUpTime < realTime){
             std::cout << "Rampup time reached, Coasting to pos!" << std::endl;
             break;
         }
 
+        //  Add 8ms to realtime after loop
         realTime += 0.008;
         rtde_control.waitPeriod(t_start);
     }
@@ -249,15 +239,20 @@ for (int j = 0; j < 2; ++j) {
     {
         steady_clock::time_point t_start = rtde_control.initPeriod();
 
+        //Get the current volcities for the current realtime (coasting, max speed is reached!)
         jointSpeedF = speedJThrow.getLinearRampUpVelocity(realTime, unitVector, targetJointSpeeds);
 
         // Safety check, if speed are positive, robot is moving in wrong direction!
         if(jointSpeedF[0] > 0 || jointSpeedF[1] > 0)
             break;
 
+        // Try to force speed slider to 1
         rtde_io.setSpeedSlider(1);
+
+        // Send speedJ command
         rtde_control.speedJ(joint_speed, acceleration, dt);
 
+        // Set joint speeds
         joint_speed[1] = jointSpeedF[0];
         joint_speed[2] = jointSpeedF[1];
 
@@ -289,7 +284,8 @@ for (int j = 0; j < 2; ++j) {
     for (unsigned int i=0; i<140; i++)
     {
         steady_clock::time_point t_start = rtde_control.initPeriod();
-        // Robot should now rampdown speed
+
+        // Robot should now rampdown speed, get down
         jointSpeedF = speedJThrow.getLinearRampDownVelocity(realTime, unitVector);
 
         // Safety check, if speed are positive, robot is moving in wrong direction!
@@ -328,7 +324,7 @@ for (int j = 0; j < 2; ++j) {
 
 
 
-    // Code for logging
+    // ----------------------------------------- Code for logging -----------------------------------------
     /*
     // Open CSV log file in append mode
     std::ofstream logFile;
@@ -376,220 +372,5 @@ for (int j = 0; j < 2; ++j) {
         */
 
     // -------------------- End
-
-
-
-
-
-
-    /*
-    for (unsigned int i=0; i<250; i++)
-    {
-        steady_clock::time_point t_start = rtde_control.initPeriod();
-        auto t1 = steady_clock::now();
-        rtde_control.speedJ(joint_speed, acceleration, dt);
-
-        std::cout << "Actual: " << rtde_receive.getActualQd()[2] << " Aiming for speed: " <<joint_speed[2] << " Current Time: " << realTime <<std::endl;
-        //jointSpeedF = speedJThrow.getRampUpVelocity(realTime, unitVector, targetJointSpeeds);
-
-        if(realTime > rampUpTime){
-            break;
-        }
-        else{
-            joint_speed[1] = static_cast<double>(jointSpeedF[0]);
-            joint_speed[2] = static_cast<double>(jointSpeedF[1]);
-        }
-
-        rtde_control.waitPeriod(t_start);
-
-        auto t2 = steady_clock::now();
-        auto duration = duration_cast<milliseconds>(t2 - t1).count();
-        std::cout << "Tid brugt: " << duration << " ms\n";
-
-        realTime += 0.008;
-    }
-
-    while((abs(currentPose[2]) + throwTol < abs(throwPose[2]))){
-        currentPose = rtde_receive.getActualQ();
-        //std::cout << "neek: " << currentPose[2] << std::endl;
-    }
-
-    std::thread releaseThread([&]() {
-        //std::this_thread::sleep_for(std::chrono::milliseconds(185)); // Adjust delay to release mid-way
-        gripper.Command("RELEASE(2, 420)");  // Trigger gripper release
-    });
-
-    realTime = 0;
-
-    for (unsigned int i=0; i<130; i++)
-    {
-        steady_clock::time_point t_start = rtde_control.initPeriod();
-        rtde_control.speedJ(joint_speed, acceleration, dt);
-
-        jointSpeedF = speedJThrow.getRampDownVelocity(realTime, unitVector);
-
-        if(realTime > rampUpTime)
-            break;
-
-        std::cout << "Actual: " << abs(rtde_receive.getActualQd()[2]) << " Aiming for speed: " <<joint_speed[2] << " Current Time: " << realTime <<std::endl;
-        joint_speed[1] = static_cast<double>(jointSpeedF[0]);
-        joint_speed[2] = static_cast<double>(jointSpeedF[1]);
-
-        rtde_control.waitPeriod(t_start);
-        realTime += 0.008;
-    }
-    rtde_control.speedStop();
-    rtde_control.stopScript();
-*/
-    /* --------------- Forste speedJ OUTDATED!
-    // Real time movement
-    // Parameters
-    double acceleration = 40;
-    double throwTol = 0.04;
-    std::vector<double> throwPose= {-1.19394 , -1.0508627 , -0.7332036732 , -0.51487 , M_PI/2, 0};
-    std::vector<double> joint_speed = {0.0, 0.0, 0.0, 0.0, 0.0, 0.0};
-
-    Trajectory speedJThrow;
-    std::vector<float> tabelTarget = {0.5,0.1,0};
-    std::vector<double> currentPose = {0,0,0,0,0,0};
-
-    float buildUpTime = speedJThrow.buildQubicVelocityProfiles(tabelTarget);
-
-    std::vector<float> startPose = speedJThrow.getStartPose(tabelTarget);
-
-
-    gripper.Home();
-    rtde_control.moveL(pickUp, 0.2, 0.2);
-    rtde_control.moveL(pickUpDown, 0.2, 0.2);
-    gripper.Grip(5, 36);
-    rtde_control.moveL(pickUp, 0.2, 0.2);
-    rtde_control.moveJ(throwPose, 0.3, 0.3);
-    rtde_control.moveJ({startPose[0], startPose[1], startPose[2], -0.51487, M_PI/2, 0}, 0.3);
-
-    float realTime = 0;
-    std::vector<float> jointSpeedF = {0,0};
-    std::vector<float> unitVector = speedJThrow.getUnitJointVelocity(tabelTarget);
-
-    // Execute 125Hz control loop for 2 seconds, each cycle is ~8ms
-    for (unsigned int i=0; i<130; i++)
-    {
-        steady_clock::time_point t_start = rtde_control.initPeriod();
-        rtde_control.speedJ(joint_speed, acceleration, dt);
-
-        std::cout << "Actual: " << abs(rtde_receive.getActualQd()[2]) << " Aiming for speed: " <<joint_speed[2] << " Current Time: " << realTime <<std::endl;
-        jointSpeedF = speedJThrow.getRampUpVelocity(realTime, unitVector);
-
-        if(realTime > buildUpTime){
-            break;
-        }
-        else{
-            joint_speed[1] = static_cast<double>(jointSpeedF[0]);
-            joint_speed[2] = static_cast<double>(jointSpeedF[1]);
-        }
-
-        rtde_control.waitPeriod(t_start);
-        realTime += 0.008;
-    }
-
-    while((abs(currentPose[2]) + throwTol < abs(throwPose[2]))){
-        currentPose = rtde_receive.getActualQ();
-        std::cout << "neek: " << currentPose[2] << std::endl;
-    }
-
-    std::thread releaseThread([&]() {
-        //std::this_thread::sleep_for(std::chrono::milliseconds(185)); // Adjust delay to release mid-way
-        gripper.Command("RELEASE(2, 420)");  // Trigger gripper release
-    });
-
-    realTime = 0;
-
-    for (unsigned int i=0; i<130; i++)
-    {
-        steady_clock::time_point t_start = rtde_control.initPeriod();
-        rtde_control.speedJ(joint_speed, acceleration, dt);
-
-        jointSpeedF = speedJThrow.getRampDownVelocity(realTime, unitVector);
-
-        if(realTime > buildUpTime)
-            break;
-
-        std::cout << "Actual: " << abs(rtde_receive.getActualQd()[2]) << " Aiming for speed: " <<joint_speed[2] << " Current Time: " << realTime <<std::endl;
-        joint_speed[1] = static_cast<double>(jointSpeedF[0]);
-        joint_speed[2] = static_cast<double>(jointSpeedF[1]);
-
-        rtde_control.waitPeriod(t_start);
-        realTime += 0.008;
-    }
-
-    rtde_control.speedStop();
-    rtde_control.stopScript();
-
-
-/*
-    // moveJ example, OUTDATED! ----------------------
-    int z = 0;
-    while (z < 1){
-
-        gripper.Home();
-        rtde_control.moveL(pickUp, 0.2, 0.2);
-        rtde_control.moveL(pickUpDown, 0.2, 0.2);
-        gripper.Grip(5, 36);
-        rtde_control.moveL(pickUp, 0.2, 0.2);
-        //rtde_control.moveJ({0 , -M_PI/2 , 0 , -0.51487 , M_PI/2, 0}, 0.1);
-        rtde_control.moveJ({-1.19394 , -M_PI/2 , 0 , -0.51487 , M_PI/2, 0}, 0.1);
-        rtde_control.moveJ({-1.19394 , -M_PI/2 , 0.7363 , -0.51487 , M_PI/2, 0}, 0.1);
-
-        // Start moving to the "to" position
-        std::thread releaseThread([&]() {
-            std::this_thread::sleep_for(std::chrono::milliseconds(195)); // Adjust delay to release mid-way
-            gripper.Command("RELEASE(2, 420)");  // Trigger gripper release
-        });
-
-        // Begin motion to "to" position, allowing release to occur mid-motion
-        rtde_control.moveJ({-1.19394 , -M_PI/2 , -0.7363 , -0.51487 , M_PI/2, 0}, 2.575+0.5, 40);
-
-        // Wait for the release thread to complete
-        releaseThread.join();
-        z++;
-    }
-
-/*
-    //Gripper connect MOVEL funktion! OUTDATED! -------------------------------------------
-    QCoreApplication app(argc, argv); // Initialize Qt application
-    Gripper gripper; // Create an instance of Gripper
-    gripper.connectToServer("192.168.1.20", 1000); // Attempt to connect to the server
-
-    // Check if the connection was successful
-    if (!gripper.isConnected()) {
-        std::cout << "Failed to connect to the server." << std::endl;
-        return 1; // Exit if the connection was not successful
-    }
-
-    int z = 0;
-    while (z < 1){
-
-        gripper.Home();
-        rtde_control.moveL(pickUp, 0.2, 0.2);
-        rtde_control.moveL(pickUpDown, 0.2, 0.2);
-        gripper.Grip(5, 36);
-        //rtde_control.moveL(pickUp, 0.2, 0.2);
-        //rtde_control.moveL(from, 0.3, 0.3);
-
-        rtde_control.moveJ({0 , -M_PI/4 , 0 , 0.51487 , M_PI/4, 0});
-
-        // Start moving to the "to" position
-        std::thread releaseThread([&]() {
-            std::this_thread::sleep_for(std::chrono::milliseconds(185)); // Adjust delay to release mid-way
-            gripper.Command("RELEASE(2, 420)");  // Trigger gripper release
-        });
-
-        // Begin motion to "to" position, allowing release to occur mid-motion
-        //rtde_control.moveL(to, 3, 40);
-
-        // Wait for the release thread to complete
-        releaseThread.join();
-        z++;
-        }
-        */
     return 0;
 }
